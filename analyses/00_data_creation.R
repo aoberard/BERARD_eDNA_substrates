@@ -38,7 +38,7 @@ all_edna <- rbind(pivot_12s, pivot_16s )
 # Là essayer de combiner au mieux les taxonomy
 
 
-COMMENT FAIRE?
+COMMENT FAIRE? : regrouper des clusters? transformer taxo si deja positif truc a autre truc meme groupe ?
 
 
 
@@ -51,7 +51,7 @@ COMMENT FAIRE?
 rpooled_12s <- pivote_12s %>%
   mutate(positive_replicate = case_when(reads > 0 ~ 1, 
                                         reads == 0 ~ 0))
-# For each samples sum for each cluster, sum the replicates ligne  
+# For each amorce-samples-cluster sum  sum the replicates ligne  
   
   
 
