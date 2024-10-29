@@ -60,52 +60,47 @@ all_edna <- rbind(pivot_12s, pivot_16s )
 pivot_12s %>%
   distinct(sample) %>%
   nrow()
-
 pivot_16s %>%
   distinct(sample) %>%
   nrow()
 
-
-
-#Check difference of samples between abundance file and collection file
+#Identify samples collected absents in abundance files
 samples_name <- odk %>% select(`ecouvillon_feuille-id_tube_feuille`,`sol_ligne-id_tube_sol_ligne`,id_tube_toile) %>%
   tidyr::pivot_longer(cols = everything(), values_to = "valeurs") %>%
   pull(valeurs)
 
+setdiff(pivot_12s %>% distinct(sample) %>% pull, samples_name)
+setdiff(pivot_16s %>% distinct(sample) %>% pull, samples_name)
+setdiff(samples_name, pivot_12s %>% distinct(sample) %>% pull)
+setdiff(samples_name, pivot_16s %>% distinct(sample) %>% pull)
 
-#Check difference of final_affiliation
-all_edna %>%
-  filter(primer == "12SV5") %>%
-  distinct(sample) %>%
-  nrow()
-all_edna %>%
-  filter(primer == "12SV5") %>%
+#Check differences of final_affiliation
+pivot_12s %>%
   distinct(final_affiliation) %>%
   nrow()
-all_edna %>%
-  filter(primer == "16Smamm") %>%
-  distinct(sample) %>%
-  nrow()
-all_edna %>%
-  filter(primer == "16Smamm") %>%
+pivot_16s %>%
   distinct(final_affiliation) %>%
   nrow()
 
+#Identify samples without correct number of replicates
+pivot_12s %>% group_by(sample, final_affiliation) %>%
+  filter(n() < 3) %>%
+  pull(sample) %>%
+  unique()
+pivot_12s %>% group_by(sample, final_affiliation) %>%
+  filter(n() > 3) %>%
+  pull(sample) %>%
+  unique()
+pivot_16s %>% group_by(sample, final_affiliation) %>%
+  filter(n() < 3) %>%
+  pull(sample) %>%
+  unique()
+pivot_16s %>% group_by(sample, final_affiliation) %>%
+  filter(n() > 3) %>%
+  pull(sample) %>%
+  unique()
 
-
-
-#Check if there is the correct number of replicates per sample
-duplicate_groups <- all_edna %>%
-  group_by(sample, final_affiliation) %>%
-  filter(n() < 3)
-duplicate_groups <- all_edna %>%
-  group_by(sample, final_affiliation) %>%
-  filter(n() == 3)
-duplicate_groups <- all_edna %>%
-  group_by(sample, final_affiliation) %>%
-  filter(n() > 3)
-
-# Check if taxonomy is similar between final_affiliation (should be empty)
+#Check if taxonomy is similar between final_affiliation from the two primers (should be empty)
 variations <- all_edna %>%
   group_by(sample, final_affiliation) %>%
   summarize(distinct_classes = n_distinct(Class), # Count distinct values
@@ -116,8 +111,6 @@ variations <- all_edna %>%
   filter(distinct_classes > 1 | distinct_orders > 1 | 
            distinct_families > 1 | distinct_genera > 1 | 
            distinct_species > 1)
-
-
 
 
 ## Mix affiliation from both primers ----
@@ -132,7 +125,7 @@ all_edna <- all_edna %>%
   ))
 
 # Penser que ce serait bien de savoir à quel rang est le final affiliation
-
+# mais peut-être l'ajouter que a la fin du script avec les autres colonnes pour filtrer
 
 
 
@@ -174,8 +167,6 @@ hist(edna_gpooled$sum_positive_replicate)
 
 # Check DATA pooling : que meme nombre que expected -----
 
-
-
 unique_sample_count <- n_distinct(all_edna$sample)
 unique_affiliation_count <- n_distinct(all_edna$final_affiliation)
 expected_rows <- unique_sample_count * unique_affiliation_count
@@ -208,9 +199,15 @@ edna_ppooled <- all_edna %>%
             sum_positive_replicate = sum(positive_replicate),
             sum_reads = sum(reads))
 
+hist(edna_ppooled$sum_positive_replicate)
 
 
 #(maybe it will be useful at some point ?)
+
+# eclaircir methode analyses
+
+# peut etre commencer par se poser la question de ce qui doit etre decrit (ex nbr moyens de replicas positif par cluster
+# et par x et y) - ce qui en somme n'a pas à être analysé pour la suite
   
   
 
@@ -219,5 +216,5 @@ edna_ppooled <- all_edna %>%
 ## Final columns addition ----
 # pour apres creer new colonnes : mutate(in_zoo = stringr::str_detect(sample, "ZOO")
 # creer new colonne susbtrates (type) et pk pas type taxon ou autre
-# penser à retirer cam de lignes fichier ou quoi ?
-
+# ces colonnes doivent permettre de faire les choix pour la suite quant à ce qui doit etre pris en compte dans les analyses
+# par ex pas cluster humain, par cluster domestiques, par cluster en dessous d'une affiliaiton au genre etc
