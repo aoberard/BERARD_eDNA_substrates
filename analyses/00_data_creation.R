@@ -5,11 +5,11 @@ library(readxl)
 library(dplyr)
 library(stringr)
 
-## Import raw data ----
+## Import raw data ▲ attention la data sample replica corrected ajout colonnes vides----
 
 #Manually corrected abundance files
-raw_12s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.10.28_12SV5_eDNA_abundance.xlsx"))
-raw_16s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.10.28_16Smam_eDNA_abundance.xlsx"))
+raw_12s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.10.30_12SV5_eDNA_abundance_samplecorrected.xlsx"))
+raw_16s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.10.30_16Smam_eDNA_abundance_samplecorrected.xlsx"))
 
 #Collection data
 odk <- readr::read_csv(here::here("data","raw-data","2024.10.29_odk_eDNA.csv"))
@@ -101,7 +101,7 @@ pivot_16s %>% group_by(sample, final_affiliation) %>%
   unique()
 
 #Check if taxonomy is similar between final_affiliation from the two primers (should be empty)
-variations <- all_edna %>%
+all_edna %>%
   group_by(sample, final_affiliation) %>%
   summarize(distinct_classes = n_distinct(Class), # Count distinct values
             distinct_orders = n_distinct(Order),
@@ -115,30 +115,31 @@ variations <- all_edna %>%
 
 ## Mix affiliation from both primers ----
 
-all_edna <- all_edna %>%
-  mutate(case_when( final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
-                    final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
-                    final_affiliation == "Passeriformes" ~ "Passeriformes_3",
-                    final_affiliation == "Phylloscopus" ~ "Phylloscopus_collybita",
-                    final_affiliation == "Sturnus" ~ "Sturnus_vulgaris",
-                    final_affiliation == "Bufonidae" ~ "Bufo"
-  ))
-
-# Penser que ce serait bien de savoir à quel rang est le final affiliation
-# mais peut-être l'ajouter que a la fin du script avec les autres colonnes pour filtrer
-
-
-
-
-
-AFAIRE (en essayant garder info que issu de pools qqpart ?)
-attention bien chager nom apres si la creation nouveau nom (all_edna utilise apres) sinon garder meme si pas de soucis
-
-
-
-ATTNETION LORS DU POOLING PAR REPLICATS ENSUITE ON FAIT UN POOL DES REPLICAS PAR UN CLUSTER, SAUF QUE CLUSTER ON LE MEME NOM MAIS PAS FORCEMENT
-ATTACHE A LA MEME AFFILIATION SELON LES RUNS, DONC VAUT MIEUX SOIT POOL PAR CLUSTER-amorces-run soit par affiliation (affiliation ce qui sera fait à la fin là
-)
+# all_edna <- all_edna %>%
+#   mutate(case_when( final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
+#                     final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
+#                     final_affiliation == "Passeriformes" ~ "Passeriformes_3",
+#                     final_affiliation == "Phylloscopus" ~ "Phylloscopus_collybita",
+#                     final_affiliation == "Sturnus" ~ "Sturnus_vulgaris",
+#                     final_affiliation == "Bufonidae" ~ "Bufo"
+#   ))
+# 
+# # Penser que ce serait bien de savoir à quel rang est le final affiliation
+# # mais peut-être l'ajouter que a la fin du script avec les autres colonnes pour filtrer
+# 
+# # ILF FAUT PAS FAIRE COMME J'AI COMMENCE A FAIRE, JUSTE remplacer nom affiliation en 
+# # se disant que va etre pool ensuite lors du pool, car vaut artificiellement augmenter nbr replica
+# # parfois, donc faut faire rassemblement affiliation avant decompte replica
+# 
+# 
+# AFAIRE (en essayant garder info que issu de pools qqpart ?)
+# attention bien chager nom apres si la creation nouveau nom (all_edna utilise apres) sinon garder meme si pas de soucis
+# 
+# 
+# 
+# ATTNETION LORS DU POOLING PAR REPLICATS ENSUITE ON FAIT UN POOL DES REPLICAS PAR UN CLUSTER, SAUF QUE CLUSTER ON LE MEME NOM MAIS PAS FORCEMENT
+# ATTACHE A LA MEME AFFILIATION SELON LES RUNS, DONC VAUT MIEUX SOIT POOL PAR CLUSTER-amorces-run soit par affiliation (affiliation ce qui sera fait à la fin là
+# )
 
 
 
@@ -190,13 +191,13 @@ missing_or_combined <- anti_join(expected_groups, edna_gpooled, by = c("sample",
 
 
 
-
 ### By pooling when taking into account primer (alternative) ----
 #Pooling per samples-cluster-primer
 edna_ppooled <- all_edna %>%
   group_by(sample, primer, final_affiliation, ) %>%
   summarize(across(c(Class, Order, Family, Genus, Species), first),
             sum_positive_replicate = sum(positive_replicate),
+            pooled_number = n(),
             sum_reads = sum(reads))
 
 hist(edna_ppooled$sum_positive_replicate)
@@ -213,8 +214,68 @@ hist(edna_ppooled$sum_positive_replicate)
 
 
 
-## Final columns addition ----
-# pour apres creer new colonnes : mutate(in_zoo = stringr::str_detect(sample, "ZOO")
-# creer new colonne susbtrates (type) et pk pas type taxon ou autre
+## Final variable addition ----
 # ces colonnes doivent permettre de faire les choix pour la suite quant à ce qui doit etre pris en compte dans les analyses
-# par ex pas cluster humain, par cluster domestiques, par cluster en dessous d'une affiliaiton au genre etc
+# y'a toujours la sardine, enlever avant ou ? (bien verif que y'avait pas dans les neg et qu'il faut pas l'enlever ou quoi des data)
+
+#Variable to identify substrate type
+edna_gpooled <- edna_gpooled %>%
+  mutate(substrate = case_when(
+    stringr::str_detect(sample, "LEAF") ~ "leaf",
+    stringr::str_detect(sample, "SOIL") ~ "soil",
+    stringr::str_detect(sample, "WEB") ~ "spiderweb",
+    .default = "other"
+  ))
+edna_ppooled <- edna_ppooled %>%
+  mutate(substrate = case_when(
+    stringr::str_detect(sample, "LEAF") ~ "leaf",
+    stringr::str_detect(sample, "SOIL") ~ "soil",
+    stringr::str_detect(sample, "WEB") ~ "spiderweb",
+    .default = "other"
+  ))
+
+#Variable to identify possible domestic taxa
+domestic_affiliation_names <- c("Sus_scrofa",
+                                "Gallus_gallus",
+                                "Bos_taurus",
+                                "Capra_hircus",
+                                "Ovis_aries",
+                                "Canis_lupus",
+                                "Equus_caballus",
+                                "Meleagris_gallopavo"
+                                )
+
+#Phasianus_colchicus ? Numida_meleagris ? Alectoris_rufa? mises avec les domestiques ? (peutetre plus pintade que faisan mais jsp)
+# serait surtout numida en vrai parmi eux, mais et encore
+################### VERIFIER LISTE MISE DEDANS APRES AVEC MAX
+
+edna_gpooled <- edna_gpooled %>%
+  mutate(domestic = final_affiliation %in% domestic_affiliation_names)
+edna_ppooled <- edna_ppooled %>%
+  mutate(domestic = final_affiliation %in% domestic_affiliation_names)
+
+
+#Variable to identify samples from the ZOO
+edna_gpooled <- edna_gpooled %>%
+  mutate(in_zoo = stringr::str_detect(sample, "ZOO"))
+edna_ppooled <- edna_ppooled %>%
+  mutate(in_zoo = stringr::str_detect(sample, "ZOO"))
+
+#Variable to identify level of final_affiliation
+edna_gpooled <- edna_gpooled %>%
+  mutate(affiliation_level = case_when(
+    Species != "Multi-affiliation" ~ "species",
+    Genus !="Multi-affiliation" ~ "genus",
+    Family !="Multi-affiliation" ~ "family",
+    Order !="Multi-affiliation" ~ "order",
+    Class !="Multi-affiliation" ~ "class",
+  ))
+
+edna_ppooled <- edna_ppooled %>%
+  mutate(affiliation_level = case_when(
+    Species != "Multi-affiliation" ~ "species",
+    Genus !="Multi-affiliation" ~ "genus",
+    Family !="Multi-affiliation" ~ "family",
+    Order !="Multi-affiliation" ~ "order",
+    Class !="Multi-affiliation" ~ "class",
+  ))
