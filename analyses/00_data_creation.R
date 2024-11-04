@@ -5,11 +5,9 @@ library(readxl)
 library(dplyr)
 library(stringr)
 
-## Import raw data ▲ attention la data sample replica corrected ajout colonnes vides----
-
 #Manually corrected abundance files
 raw_12s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.10.30_12SV5_eDNA_abundance_samplecorrected.xlsx"))
-raw_16s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.10.30_16Smam_eDNA_abundance_samplecorrected.xlsx"))
+raw_16s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.11.04_16Smam_eDNA_abundance_samplecorrected.xlsx"))
 
 #Collection data
 odk <- readr::read_csv(here::here("data","raw-data","2024.10.29_odk_eDNA.csv"))
@@ -22,9 +20,9 @@ odk <- odk %>% select(`info-localite`, id_tube_toile, `ecouvillon_feuille-id_tub
 rm(odk_w)
 
 
-## Global data creation ----
+# Global data creation ----
 
-### Pivot longer data ----
+## Pivot longer data ----
 
 #Pivot longer data both file
 pivot_12s <- raw_12s_abundance%>%
@@ -45,7 +43,7 @@ pivot_16s <- pivot_16s %>%
   mutate(primer = "16Smamm")
 
 
-### Bind data from the two primers ----
+## Bind data from the two primers ----
 #Keep shared columns only
 pivot_12s <- pivot_12s %>%
   select(intersect(colnames(pivot_12s), colnames(pivot_16s)))
@@ -54,7 +52,7 @@ pivot_12s <- pivot_12s %>%
 all_edna <- rbind(pivot_12s, pivot_16s )
 
 
-### Check global data ----
+## Check global data ----
 
 #Number of samples per primers
 pivot_12s %>%
@@ -113,88 +111,44 @@ all_edna %>%
            distinct_species > 1)
 
 
-## Mix affiliation from both primers ----
+# ATTENTION ATTENTION Mix affiliation from both primers ----
+all_edna <- all_edna %>%
+  mutate(case_when( final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
+                    final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
+                    final_affiliation == "Passeriformes" ~ "Passeriformes_3",
+                    final_affiliation == "Phylloscopus" ~ "Phylloscopus_collybita",
+                    final_affiliation == "Sturnus" ~ "Sturnus_vulgaris",
+                    final_affiliation == "Bufonidae" ~ "Bufo",
+                    final_affiliation %in% c("Columba_livia", "Columba_palumbus") ~ "Columbidae",
+                    final_affiliation %in% c("Corvus","Pica_pica") ~ "Corvidae",
+                    final_affiliation %in% c("Turdus_philomelos","Turdus_merula") ~ "Turdus"
+  ))
 
-# all_edna <- all_edna %>%
-#   mutate(case_when( final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
-#                     final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
-#                     final_affiliation == "Passeriformes" ~ "Passeriformes_3",
-#                     final_affiliation == "Phylloscopus" ~ "Phylloscopus_collybita",
-#                     final_affiliation == "Sturnus" ~ "Sturnus_vulgaris",
-#                     final_affiliation == "Bufonidae" ~ "Bufo"
-#   ))
+# attention a probleme taxonomique aussi ensuite ! (jointure tables + 
+# colonne nouvellement créer qui utilise que multiaffiliation pour identifier quel rang est la final affiliation)
 # 
-# # Penser que ce serait bien de savoir à quel rang est le final affiliation
-# # mais peut-être l'ajouter que a la fin du script avec les autres colonnes pour filtrer
-# 
-# # ILF FAUT PAS FAIRE COMME J'AI COMMENCE A FAIRE, JUSTE remplacer nom affiliation en 
+# # ILF FAUT PAS FAIRE COMME J'AI COMMENCE A FAIRE, JUSTE remplacer nom affiliation en
 # # se disant que va etre pool ensuite lors du pool, car vaut artificiellement augmenter nbr replica
 # # parfois, donc faut faire rassemblement affiliation avant decompte replica
+# Dans tous les cas le pooling va faire augmentation nbr replica, car reste les mêmes individus
 # 
+# Ou alors faire pooling amorces après pooling de chaque amorce comme ça on peut
+# pb de cluster qui apparaissent que dans un run et pas dans l'autre, l'autre tous negatifs à ça?
 # 
-# AFAIRE (en essayant garder info que issu de pools qqpart ?)
-# attention bien chager nom apres si la creation nouveau nom (all_edna utilise apres) sinon garder meme si pas de soucis
-# 
-# 
-# 
-# ATTNETION LORS DU POOLING PAR REPLICATS ENSUITE ON FAIT UN POOL DES REPLICAS PAR UN CLUSTER, SAUF QUE CLUSTER ON LE MEME NOM MAIS PAS FORCEMENT
-# ATTACHE A LA MEME AFFILIATION SELON LES RUNS, DONC VAUT MIEUX SOIT POOL PAR CLUSTER-amorces-run soit par affiliation (affiliation ce qui sera fait à la fin là
-# )
 
 
 
-## Pooling replicates per sample ----
+# Pooling replicates per sample ----
   
 #Create a positive_replicate column to count positive replicates per samples-cluster when pooling
 all_edna <- all_edna %>%
   mutate(positive_replicate = case_when(reads > 0 ~ 1, 
                                         reads == 0 ~ 0))
 
-### By pooling the two primers indiscriminately ----
-#Pooling per samples-cluster
-edna_gpooled <- all_edna %>%
-  group_by(sample, final_affiliation) %>%
-  summarize(across(c(Class, Order, Family, Genus, Species), first),
-            sum_positive_replicate = sum(positive_replicate),
-            pooled_number = n(),
-            sum_reads = sum(reads),
-            primers = "12S + 16S")
-
-
-hist(edna_gpooled$sum_positive_replicate)
-
-
-
-
-# Check DATA pooling : que meme nombre que expected -----
-
-unique_sample_count <- n_distinct(all_edna$sample)
-unique_affiliation_count <- n_distinct(all_edna$final_affiliation)
-expected_rows <- unique_sample_count * unique_affiliation_count
-actual_rows <- nrow(edna_gpooled)
-
-# Calculate the expected distinct groups
-expected_groups <- expand.grid(sample = unique(all_edna$sample), 
-                               final_affiliation = unique(all_edna$final_affiliation))
-# Identify missing or collapsed combinations
-missing_or_combined <- anti_join(expected_groups, edna_gpooled, by = c("sample", "final_affiliation"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-### By pooling when taking into account primer (alternative) ----
+## Pooling for each primiers ----
 #Pooling per samples-cluster-primer
 edna_ppooled <- all_edna %>%
-  group_by(sample, primer, final_affiliation, ) %>%
+  group_by(sample, primer, final_affiliation ) %>%
   summarize(across(c(Class, Order, Family, Genus, Species), first),
             sum_positive_replicate = sum(positive_replicate),
             pooled_number = n(),
@@ -203,20 +157,27 @@ edna_ppooled <- all_edna %>%
 hist(edna_ppooled$sum_positive_replicate)
 
 
-#(maybe it will be useful at some point ?)
+## Pooling the two primers data ----
+#Generate columns to count positive replicates per primers and then pool them per sample -affiliation
+edna_gpooled <- edna_ppooled %>%
+  mutate( sum_positive_replicate_12s = case_when( primer == "12SV5" ~ sum_positive_replicate, TRUE ~ 0)) %>%
+  mutate( sum_positive_replicate_16s = case_when( primer == "16Smamm" ~ sum_positive_replicate, TRUE ~ 0)) %>%
+  group_by(sample, final_affiliation) %>%
+  summarize(across(c(Class, Order, Family, Genus, Species), first),
+            sum_positive_replicate = sum(sum_positive_replicate),
+            sum_positive_replicate_12s = sum(sum_positive_replicate_12s),
+            sum_positive_replicate_16s = sum(sum_positive_replicate_16s),
+            pooled_number = sum(pooled_number),
+            pooled_percent_positive = round(100*sum_positive_replicate / pooled_number, 0),
+            sum_reads = sum(sum_reads))
 
-# eclaircir methode analyses
-
-# peut etre commencer par se poser la question de ce qui doit etre decrit (ex nbr moyens de replicas positif par cluster
-# et par x et y) - ce qui en somme n'a pas à être analysé pour la suite
-  
-  
+#Check pooling
+unique(edna_gpooled$pooled_number)  #should equal 6 or 3
 
 
 
-## Final variable addition ----
-# ces colonnes doivent permettre de faire les choix pour la suite quant à ce qui doit etre pris en compte dans les analyses
-# y'a toujours la sardine, enlever avant ou ? (bien verif que y'avait pas dans les neg et qu'il faut pas l'enlever ou quoi des data)
+# Final variable creation for data filtering ----
+#New columns are created in order to make choice about which rows to consider for further analysis
 
 #Variable to identify substrate type
 edna_gpooled <- edna_gpooled %>%
@@ -248,12 +209,12 @@ domestic_affiliation_names <- c("Sus_scrofa",
 #Phasianus_colchicus ? Numida_meleagris ? Alectoris_rufa? mises avec les domestiques ? (peutetre plus pintade que faisan mais jsp)
 # serait surtout numida en vrai parmi eux, mais et encore
 ################### VERIFIER LISTE MISE DEDANS APRES AVEC MAX
+# lui avait pas noter capra hircus, ni cheval ni dinde
 
 edna_gpooled <- edna_gpooled %>%
   mutate(domestic = final_affiliation %in% domestic_affiliation_names)
 edna_ppooled <- edna_ppooled %>%
   mutate(domestic = final_affiliation %in% domestic_affiliation_names)
-
 
 #Variable to identify samples from the ZOO
 edna_gpooled <- edna_gpooled %>%
@@ -279,3 +240,4 @@ edna_ppooled <- edna_ppooled %>%
     Order !="Multi-affiliation" ~ "order",
     Class !="Multi-affiliation" ~ "class",
   ))
+
