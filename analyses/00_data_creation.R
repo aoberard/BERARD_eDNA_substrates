@@ -112,16 +112,36 @@ all_edna %>%
 
 
 # ATTENTION ATTENTION Mix affiliation from both primers ----
+
 all_edna <- all_edna %>%
-  mutate(case_when( final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
-                    final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
-                    final_affiliation == "Passeriformes" ~ "Passeriformes_3",
-                    final_affiliation == "Phylloscopus" ~ "Phylloscopus_collybita",
-                    final_affiliation == "Sturnus" ~ "Sturnus_vulgaris",
-                    final_affiliation == "Bufonidae" ~ "Bufo",
-                    final_affiliation %in% c("Columba_livia", "Columba_palumbus") ~ "Columbidae",
-                    final_affiliation %in% c("Corvus","Pica_pica") ~ "Corvidae",
-                    final_affiliation %in% c("Turdus_philomelos","Turdus_merula") ~ "Turdus"
+  mutate(final_affiliation = case_when( 
+    final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
+    final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
+    final_affiliation == "Phylloscopus" ~ "Phylloscopus_collybita",
+    final_affiliation == "Sturnus" ~ "Sturnus_vulgaris",
+    final_affiliation == "Bufonidae" ~ "Bufo",
+    final_affiliation %in% c("Turdus_philomelos","Turdus_merula") ~ "Turdus"
+    final_affiliation %in% c("Corvus","Pica_pica") ~ "Corvidae",
+    final_affiliation %in% c("Columba_livia", "Columba_palumbus") ~ "Columbidae",
+    final_affiliation == "Passeriformes" ~ "Passeriformes_3",
+    )) %>%
+  mutate(Species = case_when( 
+    final_affiliation == "Apodemus_sylvaticus" ~ "Apodemus_sylvaticus",
+    final_affiliation == "Aegithalos_caudatus" ~ "Aegithalos_caudatus",
+    final_affiliation == "Phylloscopus_collybita" ~ "Phylloscopus_collybita",
+    final_affiliation == "Sturnus_vulgaris" ~ "Sturnus_vulgaris",
+    final_affiliation == "Turdus" ~ "Multi-affiliation",
+    final_affiliation == "Corvidae" ~ "Multi-affiliation",
+    final_affiliation == "Columbidae" ~ "Multi-affiliation",
+    )) %>%
+  mutate(Genus = case_when(
+    final_affiliation == "Bufo" ~ "Bufo",
+    final_affiliation == "Corvidae" ~ "Multi-affiliation"
+    
+    
+    
+# est-ce que pas faisable uniquement juste vant primers pooling, uniquement pour tableau primer pooling aussi (en faire une des premieres etapes avant primers pooling ?)
+    
   ))
 
 # attention a probleme taxonomique aussi ensuite ! (jointure tables + 
@@ -135,6 +155,9 @@ all_edna <- all_edna %>%
 # Ou alors faire pooling amorces après pooling de chaque amorce comme ça on peut
 # pb de cluster qui apparaissent que dans un run et pas dans l'autre, l'autre tous negatifs à ça?
 # 
+
+# Attention, s'assurer que pose pas de probleme au moment de jointure taxonomie, lors pooling amorces,
+# car si que premier taxa choisi, pourrait aboutir à niveau affiliation percu moins grand 
 
 
 
@@ -225,19 +248,19 @@ edna_ppooled <- edna_ppooled %>%
 #Variable to identify level of final_affiliation
 edna_gpooled <- edna_gpooled %>%
   mutate(affiliation_level = case_when(
-    Species != "Multi-affiliation" ~ "species",
-    Genus !="Multi-affiliation" ~ "genus",
-    Family !="Multi-affiliation" ~ "family",
-    Order !="Multi-affiliation" ~ "order",
-    Class !="Multi-affiliation" ~ "class",
+    Species == final_affiliation ~ "species",
+    Genus == final_affiliation ~ "genus",
+    Family == final_affiliation ~ "family",
+    Order == final_affiliation ~ "order",
+    Class == final_affiliation ~ "class",
   ))
 
 edna_ppooled <- edna_ppooled %>%
   mutate(affiliation_level = case_when(
-    Species != "Multi-affiliation" ~ "species",
-    Genus !="Multi-affiliation" ~ "genus",
-    Family !="Multi-affiliation" ~ "family",
-    Order !="Multi-affiliation" ~ "order",
-    Class !="Multi-affiliation" ~ "class",
+    Species == final_affiliation ~ "species",
+    Genus == final_affiliation ~ "genus",
+    Family == final_affiliation ~ "family",
+    Order == final_affiliation ~ "order",
+    Class == final_affiliation ~ "class",
   ))
 
