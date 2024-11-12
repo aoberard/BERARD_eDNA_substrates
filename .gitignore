@@ -21,3 +21,8 @@ README.html
 inst/doc
 man/
 NAMESPACE
+
+#Derived files
+data/derived-data/
+
+figures/

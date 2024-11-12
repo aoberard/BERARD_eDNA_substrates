@@ -7,7 +7,7 @@ library(stringr)
 
 #Manually corrected abundance files
 raw_12s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.10.30_12SV5_eDNA_abundance_samplecorrected.xlsx"))
-raw_16s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.11.04_16Smam_eDNA_abundance_samplecorrected.xlsx"))
+raw_16s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.11.10_16Smam_eDNA_abundance_samplecorrected.xlsx"))
 
 #Collection data
 odk <- readr::read_csv(here::here("data","raw-data","2024.10.29_odk_eDNA.csv"))
@@ -101,7 +101,7 @@ pivot_16s %>% group_by(sample, final_affiliation) %>%
 #Check if taxonomy is similar between final_affiliation from the two primers (should be empty)
 all_edna %>%
   group_by(sample, final_affiliation) %>%
-  summarize(distinct_classes = n_distinct(Class), # Count distinct values
+  summarize(distinct_classes = n_distinct(Class),
             distinct_orders = n_distinct(Order),
             distinct_families = n_distinct(Family),
             distinct_genera = n_distinct(Genus),
@@ -109,55 +109,6 @@ all_edna %>%
   filter(distinct_classes > 1 | distinct_orders > 1 | 
            distinct_families > 1 | distinct_genera > 1 | 
            distinct_species > 1)
-
-
-# ATTENTION ATTENTION Mix affiliation from both primers ----
-
-all_edna <- all_edna %>%
-  mutate(final_affiliation = case_when( 
-    final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
-    final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
-    final_affiliation == "Phylloscopus" ~ "Phylloscopus_collybita",
-    final_affiliation == "Sturnus" ~ "Sturnus_vulgaris",
-    final_affiliation == "Bufonidae" ~ "Bufo",
-    final_affiliation %in% c("Turdus_philomelos","Turdus_merula") ~ "Turdus"
-    final_affiliation %in% c("Corvus","Pica_pica") ~ "Corvidae",
-    final_affiliation %in% c("Columba_livia", "Columba_palumbus") ~ "Columbidae",
-    final_affiliation == "Passeriformes" ~ "Passeriformes_3",
-    )) %>%
-  mutate(Species = case_when( 
-    final_affiliation == "Apodemus_sylvaticus" ~ "Apodemus_sylvaticus",
-    final_affiliation == "Aegithalos_caudatus" ~ "Aegithalos_caudatus",
-    final_affiliation == "Phylloscopus_collybita" ~ "Phylloscopus_collybita",
-    final_affiliation == "Sturnus_vulgaris" ~ "Sturnus_vulgaris",
-    final_affiliation == "Turdus" ~ "Multi-affiliation",
-    final_affiliation == "Corvidae" ~ "Multi-affiliation",
-    final_affiliation == "Columbidae" ~ "Multi-affiliation",
-    )) %>%
-  mutate(Genus = case_when(
-    final_affiliation == "Bufo" ~ "Bufo",
-    final_affiliation == "Corvidae" ~ "Multi-affiliation"
-    
-    
-    
-# est-ce que pas faisable uniquement juste vant primers pooling, uniquement pour tableau primer pooling aussi (en faire une des premieres etapes avant primers pooling ?)
-    
-  ))
-
-# attention a probleme taxonomique aussi ensuite ! (jointure tables + 
-# colonne nouvellement créer qui utilise que multiaffiliation pour identifier quel rang est la final affiliation)
-# 
-# # ILF FAUT PAS FAIRE COMME J'AI COMMENCE A FAIRE, JUSTE remplacer nom affiliation en
-# # se disant que va etre pool ensuite lors du pool, car vaut artificiellement augmenter nbr replica
-# # parfois, donc faut faire rassemblement affiliation avant decompte replica
-# Dans tous les cas le pooling va faire augmentation nbr replica, car reste les mêmes individus
-# 
-# Ou alors faire pooling amorces après pooling de chaque amorce comme ça on peut
-# pb de cluster qui apparaissent que dans un run et pas dans l'autre, l'autre tous negatifs à ça?
-# 
-
-# Attention, s'assurer que pose pas de probleme au moment de jointure taxonomie, lors pooling amorces,
-# car si que premier taxa choisi, pourrait aboutir à niveau affiliation percu moins grand 
 
 
 
@@ -175,14 +126,56 @@ edna_ppooled <- all_edna %>%
   summarize(across(c(Class, Order, Family, Genus, Species), first),
             sum_positive_replicate = sum(positive_replicate),
             pooled_number = n(),
-            sum_reads = sum(reads))
-
-hist(edna_ppooled$sum_positive_replicate)
+            sum_reads = sum(reads)) %>%
+  ungroup()
 
 
 ## Pooling the two primers data ----
-#Generate columns to count positive replicates per primers and then pool them per sample -affiliation
+
+### Mix affiliation from both primers ----
+
+# Conversion of final_affiliation and related taxonomy for shared taxa between primers
 edna_gpooled <- edna_ppooled %>%
+  mutate(final_affiliation = case_when( 
+    final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
+    final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
+    final_affiliation == "Phylloscopus" ~ "Phylloscopus_collybita",
+    final_affiliation == "Sturnus" ~ "Sturnus_vulgaris",
+    final_affiliation == "Bufonidae" ~ "Bufo",
+    final_affiliation %in% c("Turdus_philomelos","Turdus_merula") ~ "Turdus",
+    final_affiliation %in% c("Corvus","Pica_pica") ~ "Corvidae",
+    final_affiliation %in% c("Columba_livia", "Columba_palumbus") ~ "Columbidae",
+    final_affiliation == "Passeriformes" ~ "Passeriformes_3",
+    TRUE ~ final_affiliation
+  )) %>%
+  mutate(Species = case_when( 
+    final_affiliation == "Apodemus_sylvaticus" ~ "Apodemus_sylvaticus",
+    final_affiliation == "Aegithalos_caudatus" ~ "Aegithalos_caudatus",
+    final_affiliation == "Phylloscopus_collybita" ~ "Phylloscopus_collybita",
+    final_affiliation == "Sturnus_vulgaris" ~ "Sturnus_vulgaris",
+    final_affiliation == "Turdus" ~ "Multi-affiliation",
+    final_affiliation == "Corvidae" ~ "Multi-affiliation",
+    final_affiliation == "Columbidae" ~ "Multi-affiliation",
+    TRUE ~ Species
+  )) %>%
+  mutate(Genus = case_when(
+    final_affiliation == "Bufo" ~ "Bufo",
+    final_affiliation == "Corvidae" ~ "Multi-affiliation",
+    final_affiliation == "Columbidae" ~  "Multi-affiliation",
+    TRUE ~ Genus
+  ))
+
+#Regroup rows of shared taxa for each primers
+edna_gpooled <- edna_gpooled %>%
+  group_by(sample, primer, final_affiliation) %>%
+  summarise(across(c(Class, Order, Family, Genus, Species), first),
+          sum_positive_replicate = max(sum_positive_replicate),      # choice of keeping only highest number of postive replicates
+          pooled_number = first(pooled_number),
+          sum_reads = sum(sum_reads)) %>%
+  ungroup()
+
+#Pool primers and generate columns to count positive replicates per primers
+edna_gpooled <- edna_gpooled %>%
   mutate( sum_positive_replicate_12s = case_when( primer == "12SV5" ~ sum_positive_replicate, TRUE ~ 0)) %>%
   mutate( sum_positive_replicate_16s = case_when( primer == "16Smamm" ~ sum_positive_replicate, TRUE ~ 0)) %>%
   group_by(sample, final_affiliation) %>%
@@ -196,10 +189,18 @@ edna_gpooled <- edna_ppooled %>%
 
 #Check pooling
 unique(edna_gpooled$pooled_number)  #should equal 6 or 3
+unique(edna_gpooled$sum_positive_replicate) #should be above 6
 
 
+# Filter data ----
 
-# Final variable creation for data filtering ----
+## Filter choice ▲ ----
+filter_zoo <- TRUE
+filter_conta <- TRUE
+filter_domestic <- TRUE
+filter_affiliation_level <- TRUE
+
+## Variable creation for data filtering ----
 #New columns are created in order to make choice about which rows to consider for further analysis
 
 #Variable to identify substrate type
@@ -227,12 +228,9 @@ domestic_affiliation_names <- c("Sus_scrofa",
                                 "Canis_lupus",
                                 "Equus_caballus",
                                 "Meleagris_gallopavo"
-                                )
-
-#Phasianus_colchicus ? Numida_meleagris ? Alectoris_rufa? mises avec les domestiques ? (peutetre plus pintade que faisan mais jsp)
-# serait surtout numida en vrai parmi eux, mais et encore
-################### VERIFIER LISTE MISE DEDANS APRES AVEC MAX
-# lui avait pas noter capra hircus, ni cheval ni dinde
+)
+#Phasianus_colchicus, Numida_meleagris and Alectoris_rufa can be bred by humans
+#but are not considered to be domestic animals here, as their presence here probably comes from free-ranging individuals.
 
 edna_gpooled <- edna_gpooled %>%
   mutate(domestic = final_affiliation %in% domestic_affiliation_names)
@@ -248,19 +246,71 @@ edna_ppooled <- edna_ppooled %>%
 #Variable to identify level of final_affiliation
 edna_gpooled <- edna_gpooled %>%
   mutate(affiliation_level = case_when(
-    Species == final_affiliation ~ "species",
-    Genus == final_affiliation ~ "genus",
-    Family == final_affiliation ~ "family",
-    Order == final_affiliation ~ "order",
-    Class == final_affiliation ~ "class",
+    stringr::str_detect(final_affiliation, Species) ~ "species",
+    stringr::str_detect(final_affiliation, Genus) ~ "genus",
+    stringr::str_detect(final_affiliation, Family) ~ "family",
+    stringr::str_detect(final_affiliation, Order) ~ "order",
+    stringr::str_detect(final_affiliation, Class) ~ "class",
+    TRUE ~ NA 
   ))
 
 edna_ppooled <- edna_ppooled %>%
   mutate(affiliation_level = case_when(
-    Species == final_affiliation ~ "species",
-    Genus == final_affiliation ~ "genus",
-    Family == final_affiliation ~ "family",
-    Order == final_affiliation ~ "order",
-    Class == final_affiliation ~ "class",
+    stringr::str_detect(final_affiliation, Species) ~ "species",
+    stringr::str_detect(final_affiliation, Genus) ~ "genus",
+    stringr::str_detect(final_affiliation, Family) ~ "family",
+    stringr::str_detect(final_affiliation, Order) ~ "order",
+    stringr::str_detect(final_affiliation, Class) ~ "class",
+    TRUE ~ NA
   ))
+
+## Apply filters based on selected criteria ----
+edna_pfiltered <- edna_ppooled
+edna_gfiltered <- edna_gpooled
+
+if (filter_zoo) {
+  edna_pfiltered <- edna_pfiltered %>%
+    filter(in_zoo == FALSE)
+  
+  edna_gfiltered <- edna_gfiltered %>%
+    filter(in_zoo == FALSE)
+}
+
+if (filter_conta) {
+  edna_pfiltered <- edna_pfiltered %>%
+    filter(!final_affiliation %in% c("Homo_sapiens", "Sardina_pilchardus"))
+  
+  edna_gfiltered <- edna_gfiltered %>%
+    filter(!final_affiliation %in% c("Homo_sapiens", "Sardina_pilchardus"))
+}
+
+if (filter_domestic) {
+  edna_pfiltered <- edna_pfiltered %>%
+    filter(domestic == FALSE)
+  
+  edna_gfiltered <- edna_gfiltered %>%
+    filter(domestic == FALSE)
+}
+
+if (filter_affiliation_level) {
+  edna_pfiltered <- edna_pfiltered %>%
+    filter(affiliation_level %in% c("species", "genus"))
+  
+  edna_gfiltered <- edna_gfiltered %>%
+    filter(affiliation_level %in% c("species", "genus"))
+}
+
+
+# Writing data file ----
+edna_gpooled %>%
+  write.csv(file = here::here("data","derived-data","edna_gpooled.csv"))
+
+edna_ppooled %>%
+  write.csv(file = here::here("data","derived-data","edna_ppooled.csv"))
+
+edna_pfiltered %>%
+  write.csv(file = here::here("data","derived-data","edna_pfiltered.csv"))
+
+edna_gfiltered %>%
+  write.csv(file = here::here("data","derived-data","edna_gfiltered.csv"))
 

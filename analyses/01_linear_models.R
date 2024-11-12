@@ -420,18 +420,33 @@ plot(fit,
 
 
 
+# Rarefaction curves ----
+
+# retrive generate abundance data
+
+wild_ppooled %>% tidyr::pivot_wider(names_from = )
+
+wild_ppooled$
+library(tidyr)
+
+# Courbe de rarefaction avec accumcomp
+library("BiodiversityR")
+# a l'aor de bug sur ordi boulot ça donc peutetre test iNext?
+
+#most analysis pipelines require a community matrix (typically having sites as rows, species as columns and abundance values as cell values) and an environmental data set (typically providing numerical and categorical variables for the different sites) as inputs. 
+#donc besoin d'un pivot wider probablement
 
 
-# Courbe de rarefaction ????
+sinon fonction iNEXT permet extrapolation aussi
+https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.pdf
 
+library(iNEXT)
+iNEXT()
 
+Hill numbers
 
-
-
-
-
-
-
+# courbe rarefaction faisable egalement avec autre indice diversité que richesse, peut-être 
+# on integrera a analyse diversité
 
 
 
