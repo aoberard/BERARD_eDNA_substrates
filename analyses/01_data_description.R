@@ -242,7 +242,7 @@ plot(fit,
      
 )
 
-"### For primers ----
+### For primers ----
 affiliations_by_primer <- data_euler_pri %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(primer) %>%
@@ -299,6 +299,7 @@ fit <- eulerr::euler(c(
 ))
 
 #Draw euler plot
+
 plot(fit,
      fills = palette_primers,
      labels = list(
@@ -314,16 +315,13 @@ plot(fit,
      edges = list(
        lwd = 0,                            
        col = "#66c2a500"                      
-     ),
-     
+     )
 )
+     
 
 #Drop data used for euleur
-rm(data_euler_sub, data_euler_pri)
-
-
-
-
+rm(data_euler_sub)
+rm(data_euler_pri)
 
 
 ## Rarefaction curves ----
@@ -351,8 +349,8 @@ data_inext_list <- list(
 )
 
 #Generate rarefaction curves using INEXT
-inext_raw_12s <- iNEXT::iNEXT(data_inext_list[["12SV5"]], q = 0, datatype = "incidence_raw")
-inext_raw_16s <- iNEXT::iNEXT(data_inext_list[["16Smamm"]], q = 0, datatype = "incidence_raw")
+inext_raw_12s <- iNEXT::iNEXT(data_inext_list[["12SV5"]], q = 0, datatype = "incidence_raw", endpoint = 40)
+inext_raw_16s <- iNEXT::iNEXT(data_inext_list[["16Smamm"]], q = 0, datatype = "incidence_raw", endpoint = 40)
 
 # Plot rarefaction curves 
 plot_12s <- iNEXT::ggiNEXT(inext_raw_12s, type = 1) +
@@ -370,7 +368,7 @@ plot_16s <- iNEXT::ggiNEXT(inext_raw_16s, type = 1) +
 # Arrange plots side by side
 gridExtra::grid.arrange(plot_12s, plot_16s, ncol = 2)
 
-
+####### ATTENTION, grid sur la meme echelle a faire + changer nom primers----
 
 # Repeatability ----
 
@@ -384,6 +382,7 @@ edna_pfiltered %>%
   ggplot(aes(x = sum_positive_replicate, y = count, fill = substrate)) +
   geom_bar(stat = "identity", position = "dodge") +
   facet_grid(affiliation_level ~ primer) +
+  scale_fill_manual(values = palette_substrate) +
   labs(
     title = "Distribution of Positive Replicates by Affiliation, Primer, and Substrate",
     x = "Number of positive replicates",
@@ -394,6 +393,42 @@ edna_pfiltered %>%
 
 
 
+# pour edn gpooled - il faut utiliser pourcentage de replica positif plutot que nbr de positif car parfois
+#3 replicas pools parfois 6 etc vu que parfois taoxn partage ou pas
+#########################################
+
+# reflechir, il faut regarder difference de distribution pour chacun, en faisant abstraction de l'effet du nombre ot
+# car on sait deja que araigne plus de rpelicat +, mais on veut savoir si difference de tronche (plus souvent de 3 par rapport au total pour chaque substrat p ex , il faut s'affranchir du nombre total)
+
+
+
+
+edna_gfiltered %>%
+  mutate(percent_positive_replicate = round(100 * sum_positive_replicate / pooled_number, 1)) %>%
+  group_by(affiliation_level, substrate, percent_positive_replicate) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  filter(percent_positive_replicate > 0) %>%
+  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
+  tidyr::complete(affiliation_level, substrate, percent_positive_replicate, fill = list(count = 0)) %>%
+  ggplot(aes(x = percent_positive_replicate, y = count, fill = substrate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(rows = vars(affiliation_level)) +
+  scale_fill_manual(values = palette_substrate) +
+  labs(
+    title = "Distribution of Positive Replicates by Affiliation and Substrate",
+    x = "Percentage of Positive Replicates",
+    y = "Count"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+
+
+
+
+
+# ESSAYER DE NORMALISER AXE Y, biais lié à nombre (fonction count())
 
 
 
@@ -428,5 +463,5 @@ edna_pfiltered %>%
 # analyse replicabilité (notamment avec pool amorce pour max voulait voir - mais peut-être avec pourcentage plutot?)
 #analyse glm proba detection
 #diagramme venn pour affiliations amorces -avant et après pooling affiliations?)
-
+# boxplot dotplor de richesse par echantillon par substrat ? deja commence script linear model
 

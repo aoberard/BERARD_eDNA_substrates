@@ -13,6 +13,10 @@
  
  #essayer amorces separement ou poolés, à échelle de replica ou de l'echantillon (echelle replica relou potetre si pas colonnes filtres faites debut)?
  
+ # si fait a echelle de replica c'est different notre analyse prend en compte la replicabilite dans la
+ # probabilité de detection 
+ # sinon prend notre proba de detecter pour un individu
+ 
  # pas oublier de tester facteurs organisme effet combiné substrat
  
  
