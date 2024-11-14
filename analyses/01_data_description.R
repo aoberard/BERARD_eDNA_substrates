@@ -473,7 +473,8 @@ edna_pfiltered %>%
 edna_gfiltered %>%
   mutate(percent_positive_replicate = round(100 * sum_positive_replicate / pooled_number, 1)) %>%
   group_by(affiliation_level, substrate, percent_positive_replicate) %>%
-  summarize(count = n(), .groups = 'drop') %>%
+  summarize(count = n(),
+            .groups = 'drop') %>%
   filter(percent_positive_replicate > 0) %>%
   mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
   tidyr::complete(affiliation_level, substrate, percent_positive_replicate, fill = list(count = 0)) %>%
@@ -495,14 +496,42 @@ edna_gfiltered %>%
 
 
 
-# ESSAYER DE NORMALISER AXE Y, biais lié à nombre (fonction count())
+# ESSAYER DE NORMALISER AXE Y, biais lié à nombre 
 
 
+# Total count per substrate
+edna_gfiltered_normalized <- edna_gfiltered %>%
+  mutate(percent_positive_replicate = round(100 * sum_positive_replicate / pooled_number, 1)) %>%
+  group_by(affiliation_level, substrate, percent_positive_replicate) %>%
+  summarize(count = n(), 
+            .groups = 'drop') %>%
+  filter(percent_positive_replicate > 0) %>%
+  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
+  tidyr::complete(affiliation_level, substrate, percent_positive_replicate, fill = list(count = 0))
 
+# Normalize the count by the total per substrate
+edna_gfiltered_normalized <- edna_gfiltered_normalized %>%
+  group_by(substrate) %>%
+  mutate(
+    total_count_substrate = sum(count),  
+    normalized_count = count / total_count_substrate  
+  ) %>%
+  ungroup()
 
-
-
-
+# Plot the normalized count
+edna_gfiltered_normalized %>%
+  ggplot(aes(x = percent_positive_replicate, y = normalized_count, fill = substrate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(rows = vars(affiliation_level)) +
+  scale_fill_manual(values = palette_substrate) +
+  labs(
+    title = "Normalized Distribution of Positive Replicates by Affiliation and Substrate",
+    x = "Percentage of Positive Replicates",
+    y = "Normalized Count"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  ylim(0,1)
 
 
 

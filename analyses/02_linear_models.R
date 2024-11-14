@@ -9,7 +9,7 @@
 
 
  
- # MODELE BOURRIN GLM ---- 
+ # reflexion sur  GLM ---- 
  
  #essayer amorces separement ou poolés, à échelle de replica ou de l'echantillon (echelle replica relou potetre si pas colonnes filtres faites debut)?
  
@@ -19,20 +19,118 @@
  
  # pas oublier de tester facteurs organisme effet combiné substrat
  
+ # modeles faisable :
+ #logit 0/1 : proba de detection d'un vertebre
+ # poisson ? : variation de la richesse detecte dans un echantillon ?
  
  
  
  
  
  
+
  
  
  
  
+# GLM ----
+ 
+## Approche par échantillon (réplicats poolés) ----
+### Amorces séparement ----
+ 
+ 
+#### 12s d'abord ----
+ 
+# data glm creation ----
+d_glm_12s <- edna_pfiltered %>%
+   mutate(detection = if_else(sum_positive_replicate > 0, 1, 0)) %>%
+   filter(primer == "16Smam") %>%
+  filter (!Class %in% c("Lepidosauria", "Amphibia"))
+
+  
+ 
+# MODELE LOGIT
+ 
+m_logit_12s <- lme4::glmer(data = d_glm_12s,
+                            formula = detection ~ substrate * Class + (1|sample),
+                            family = binomial(link = "logit"),
+                            na.action = "na.fail",
+                            control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+ 
+model_selection <- MuMIn::dredge(m_logit_12s, rank = "AICc")
+model_selection %>% filter(delta <2)
+
+DHARMa::simulateResiduals(m_logit_12s) %>%
+  DHARMa::testResiduals()
+
+summary(m_logit_12s)
+
+em <- emmeans::emmeans(m_logit_12s, ~ substrate | Class)
+em
+plot(em, comparisons = TRUE)
+emmeans::contrast(em, "pairwise", adjust = "Tukey")
+
+
+# MODELE RICHESSE ?
+
+ 
+#Calculate number of positive clusters per sample - substrate - primer
+summary_detections_12 <- edna_pfiltered %>%
+  filter(primer == "12SV5") %>%
+  group_by(primer, substrate, sample) %>%
+  summarise(richness = sum(sum_positive_replicate > 0)) 
+ 
+#
+
+m_rich_12 <- lme4::glmer(
+  data = summary_detections_12,
+  formula = richness ~ substrate + (1|sample),
+  family = poisson(link="log"),
+  na.action="na.fail",
+  control = lme4::glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5))
+)
+ 
+model_selection <- MuMIn::dredge(m_rich_12, rank = "AICc")
+model_selection %>% filter(delta <2)
+
+DHARMa::simulateResiduals(m_rich_12) %>%
+  DHARMa::testResiduals()
+
+m_rich_12 |>
+  RVAideMemoire::overdisp.glmer()
+ 
+summary(m_rich_12)
  
  
  
-# là y'a reste trcus moyennes ----
+ 
+   
+   
+   
+   
+# TEST AU PIF
+ 
+d_glm <- edna_pfiltered %>%
+  mutate(detection = if_else(sum_positive_replicate > 0, 1, 0)) %>%
+  filter (!Class %in% c("Lepidosauria", "Amphibia"))
+
+
+m_logit <- lme4::glmer(data = d_glm,
+                           formula = detection ~ substrate * Class + primer + (1|sample),
+                           family = binomial(link = "logit"),
+                           na.action = "na.fail",
+                           control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+
+model_selection <- MuMIn::dredge(m_logit, rank = "AICc")
+model_selection %>% filter(delta <2)
+ 
+
+summary(m_logit)
+
+
+
+
+# Sens de variation par tests de moyennes  ----
 
  voir si besoin de changer type de moyenne selon approche glm employée
  
