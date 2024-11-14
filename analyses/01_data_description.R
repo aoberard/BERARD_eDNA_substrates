@@ -5,12 +5,14 @@ library(purrr)
 library(combinat)
 library(ggplot2)
 library(dplyr)
+library(patchwork)
+
 
 ## Graphical parameters ----
 
 #Define colors for each substrate
 palette_substrate <- c("spiderweb" = "#66c2a5AA", "leaf" = "#fc8d62AA", "soil" = "#FFD700AA")
-palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smamm" = "#A2D1D1AA")
+palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smam" = "#A2D1D1AA")
 
 
 # Data quality ----
@@ -148,6 +150,7 @@ data_euler_sub <- edna_pfiltered %>%
   filter(primer == "12SV5")
 
 data_euler_pri <- edna_pfiltered 
+
 
 ### For substrates ----
 
@@ -294,8 +297,8 @@ print(primers_area)
 # Fit euler plot
 fit <- eulerr::euler(c(
   "12S" = primers_area$count_intersect_affiliations[primers_area$primer == "12SV5"],
-  "16S" = primers_area$count_intersect_affiliations[primers_area$primer == "16Smamm"],
-  "12S&16S" = primers_area$count_intersect_affiliations[primers_area$primer == "12SV5 & 16Smamm"]
+  "16S" = primers_area$count_intersect_affiliations[primers_area$primer == "16Smam"],
+  "12S&16S" = primers_area$count_intersect_affiliations[primers_area$primer == "12SV5 & 16Smam"]
 ))
 
 #Draw euler plot
@@ -303,7 +306,7 @@ fit <- eulerr::euler(c(
 plot(fit,
      fills = palette_primers,
      labels = list(
-       labels = c("12SV5", "16Smamm"),    
+       labels = c("12SV5", "16Smam"),    
        col = "gray20",                      
        font = 2,                           
        cex = 1.5                           
@@ -322,6 +325,66 @@ plot(fit,
 #Drop data used for euleur
 rm(data_euler_sub)
 rm(data_euler_pri)
+
+
+## Histogram ----
+
+#Generate data used for histogram ▲ 
+data_hist <- edna_pfiltered %>%
+  filter(sum_positive_replicate > 0) %>%
+  group_by(primer, substrate, sample, final_affiliation) %>%
+  summarise(positive_sample = n(), .groups = "drop") %>%
+  group_by(primer, substrate, final_affiliation) %>%
+  summarise(total_count = sum(positive_sample), .groups = "drop") 
+
+#Plot for primer 12S
+hist12s <- data_hist %>%
+  filter(primer == "12SV5") %>%
+  arrange(primer, desc(total_count)) %>%
+  mutate(final_affiliation = factor(final_affiliation, levels = unique(final_affiliation))) %>%
+  ggplot(aes(x = final_affiliation, y = total_count, fill = substrate)) +
+  geom_bar(stat = "identity", position = position_dodge(preserve = "single")) +
+  labs(x = "Final Affiliation", y = "Count of Positive Samples") +
+  facet_grid(rows = vars(primer)) +
+  scale_fill_manual(values = palette_substrate) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1), 
+    legend.position = "bottom"
+  ) +
+  ylim(0, 10)
+
+#Plot for primer 16S
+hist16s <- data_hist %>%
+  filter(primer == "16Smam") %>%
+  arrange(primer, desc(total_count)) %>%
+  mutate(final_affiliation = factor(final_affiliation, levels = unique(final_affiliation))) %>%
+  ggplot(aes(x = final_affiliation, y = total_count, fill = substrate)) +
+  geom_bar(stat = "identity", position = position_dodge(preserve = "single")) +
+  labs(x = "Final Affiliation", y = "Count of Positive Samples") +
+  facet_grid(rows = vars(primer)) +
+  scale_fill_manual(values = palette_substrate) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1), 
+    legend.position = "bottom",
+  ) +
+  ylim(0, 10)
+
+#Combined histogram
+patchwork::wrap_plots(hist12s, hist16s, ncol = 1) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+rm(hist12s)
+rm(hist16s)
+
+
+
+
+
+# verif que code du debut ok car talpa = 3 zarbi
+
 
 
 ## Rarefaction curves ----
@@ -345,30 +408,34 @@ substrates_list <- edna_pfiltered$substrate %>% unique()
 
 data_inext_list <- list(
   "12SV5" = generate_inext_data("12SV5", substrates_list),
-  "16Smamm" = generate_inext_data("16Smamm", substrates_list)
+  "16Smam" = generate_inext_data("16Smam", substrates_list)
 )
 
 #Generate rarefaction curves using INEXT
-inext_raw_12s <- iNEXT::iNEXT(data_inext_list[["12SV5"]], q = 0, datatype = "incidence_raw", endpoint = 40)
-inext_raw_16s <- iNEXT::iNEXT(data_inext_list[["16Smamm"]], q = 0, datatype = "incidence_raw", endpoint = 40)
+inext_raw_12s <- iNEXT::iNEXT(data_inext_list[["12SV5"]], q = 0, datatype = "incidence_raw")
+inext_raw_16s <- iNEXT::iNEXT(data_inext_list[["16Smam"]], q = 0, datatype = "incidence_raw")
 
-# Plot rarefaction curves 
-plot_12s <- iNEXT::ggiNEXT(inext_raw_12s, type = 1) +
+#Plot rarefaction curves 
+curv_12s <- iNEXT::ggiNEXT(inext_raw_12s, type = 1) +
   scale_color_manual(values = palette_substrate) +
   scale_fill_manual(values = palette_substrate) +
   ggtitle("Rarefaction Curve - 12SV5") +
-  theme_minimal()
+  theme_minimal() +
+  ylim(c(0,60))
 
-plot_16s <- iNEXT::ggiNEXT(inext_raw_16s, type = 1) +
+curv_16s <- iNEXT::ggiNEXT(inext_raw_16s, type = 1) +
   scale_color_manual(values = palette_substrate) +
   scale_fill_manual(values = palette_substrate) + 
-  ggtitle("Rarefaction Curve - 16Smamm") +
-  theme_minimal()
+  ggtitle("Rarefaction Curve - 16Smam") +
+  theme_minimal() +
+  ylim(c(0,60))
 
-# Arrange plots side by side
-gridExtra::grid.arrange(plot_12s, plot_16s, ncol = 2)
+patchwork::wrap_plots(curv_12s, curv_16s, ncol = 2) +
+  plot_layout(guides = "collect") & 
+  theme(legend.position = "bottom")
 
-####### ATTENTION, grid sur la meme echelle a faire + changer nom primers----
+rm(curv_12s)
+rm(curv_16s)
 
 # Repeatability ----
 
@@ -454,7 +521,9 @@ edna_gfiltered %>%
 # pour savoir quelles primers utilisés (un, deux ou les deux)
 # et genre filtre ou quoi, si oui ou non activé (generer ariable true false pour chaque filtre et ensuite faire generation de la table utilisée partout ensutie)
 
+# euler plot deux à deux primers ?
 
+# Histogramme (nbr de sample positif a tous les taxons (en x les taxons)) pour chaque primer (sur meme graph, application de la couleur)
 
 
 #OBJECTIFS RESTANTS : 

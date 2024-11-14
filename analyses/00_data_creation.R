@@ -40,7 +40,7 @@ pivot_12s <- pivot_12s %>%
   mutate(primer = "12SV5")
 pivot_16s <- pivot_16s %>%
   mutate(sample = stringr::str_extract(PCRreplicate, "^[^-]*")) %>%
-  mutate(primer = "16Smamm")
+  mutate(primer = "16Smam")
 
 
 ## Bind data from the two primers ----
@@ -177,7 +177,7 @@ edna_gpooled <- edna_gpooled %>%
 #Pool primers and generate columns to count positive replicates per primers
 edna_gpooled <- edna_gpooled %>%
   mutate( sum_positive_replicate_12s = case_when( primer == "12SV5" ~ sum_positive_replicate, TRUE ~ 0)) %>%
-  mutate( sum_positive_replicate_16s = case_when( primer == "16Smamm" ~ sum_positive_replicate, TRUE ~ 0)) %>%
+  mutate( sum_positive_replicate_16s = case_when( primer == "16Smam" ~ sum_positive_replicate, TRUE ~ 0)) %>%
   group_by(sample, final_affiliation) %>%
   summarize(across(c(Class, Order, Family, Genus, Species), first),
             sum_positive_replicate = sum(sum_positive_replicate),
