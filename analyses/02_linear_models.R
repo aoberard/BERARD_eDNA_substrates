@@ -24,7 +24,13 @@
  # poisson ? : variation de la richesse detecte dans un echantillon ?
  
  
+ # TRUC RANDOM A TROUVE PLACE OU SUPPR ----
  
+ all_edna$final_affiliation %>%
+   unique() %>%
+   .[!stringr::str_detect(., pattern = "[1-9]")] %>%
+   paste(collapse = ",") %>%
+   stringr::str_replace_all(pattern = "_", replacement = " ")
  
  
  

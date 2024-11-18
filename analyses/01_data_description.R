@@ -146,11 +146,10 @@ edna_pfiltered %>%
 ## Euleur Plots ----
 
 #Choose data used for euleur plots ▲ 
-data_euler_sub <- edna_pfiltered %>%
-  filter(primer == "12SV5")
+data_euler_sub <- edna_gfiltered 
 
 data_euler_pri <- edna_pfiltered 
-
+# attention, pas eu le pool des taxonomies ici pour primers : pas cools enleve l'interet un peu ----
 
 ### For substrates ----
 
@@ -229,7 +228,7 @@ rm(sp, lf, so, splf, lfso, spso, splfso)
 plot(fit,
      fills = palette_substrate,
      labels = list(
-       labels = c("Spiderweb", "Leaf", "Soil"),    
+       labels = c("Toile d'araignées", "Ecouvillons de feuilles", "Sol"),    
        col = "gray20",                      
        font = 2,                           
        cex = 1.5                           
@@ -389,6 +388,8 @@ rm(hist16s)
 
 ## Rarefaction curves ----
 
+
+### For each primers ----
 #Function to generate inext data
 generate_inext_data <- function(primer_type, substrates) {
   mapply(function(sub) {
@@ -406,14 +407,14 @@ generate_inext_data <- function(primer_type, substrates) {
 #Application of function 
 substrates_list <- edna_pfiltered$substrate %>% unique() 
 
-data_inext_list <- list(
+data_inext_ppooled <- list(
   "12SV5" = generate_inext_data("12SV5", substrates_list),
   "16Smam" = generate_inext_data("16Smam", substrates_list)
 )
 
 #Generate rarefaction curves using INEXT
-inext_raw_12s <- iNEXT::iNEXT(data_inext_list[["12SV5"]], q = 0, datatype = "incidence_raw")
-inext_raw_16s <- iNEXT::iNEXT(data_inext_list[["16Smam"]], q = 0, datatype = "incidence_raw")
+inext_raw_12s <- iNEXT::iNEXT(data_inext_ppooled[["12SV5"]], q = 0, datatype = "incidence_raw")
+inext_raw_16s <- iNEXT::iNEXT(data_inext_ppooled[["16Smam"]], q = 0, datatype = "incidence_raw")
 
 #Plot rarefaction curves 
 curv_12s <- iNEXT::ggiNEXT(inext_raw_12s, type = 1) +
@@ -436,6 +437,49 @@ patchwork::wrap_plots(curv_12s, curv_16s, ncol = 2) +
 
 rm(curv_12s)
 rm(curv_16s)
+
+
+
+
+
+### For both primers ----
+
+#Generate inext data from filtered pooled primers
+data_inext_gpooled <- lapply(substrates_list, function(sub) {
+  df <- edna_gfiltered %>%
+    filter(substrate == sub) %>%
+    mutate(sum_positive_replicate = if_else(sum_positive_replicate > 0, 1, 0)) %>%
+    select(sample, final_affiliation, sum_positive_replicate) %>%
+    tidyr::pivot_wider(names_from = sample, values_from = sum_positive_replicate) %>%
+    as.data.frame()
+  
+  rownames(df) <- df$final_affiliation
+  df <- df %>% select(-final_affiliation)
+  return(df)
+})
+names(data_inext_gpooled) <- substrates_list
+
+#Generate rarefaction curves using INEXT
+inext_raw_gpooled <- iNEXT::iNEXT(data_inext_gpooled, q = 0, datatype = "incidence_raw")
+
+#Plot rarefaction curves 
+curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1) +
+  scale_color_manual(values = palette_substrate) +
+  scale_fill_manual(values = palette_substrate) +
+  ggtitle("Rarefaction Curve - 12SV5") +
+  theme_minimal() +
+  ylim(c(0,60))
+
+curv_gpooled
+
+
+
+
+
+# attention regarder si ajout de 000 ! si pb ? gros biais et si corrigeable -----
+# + mettre au propre cette partie
+
+
 
 # Repeatability ----
 
@@ -532,6 +576,25 @@ edna_gfiltered_normalized %>%
   theme_minimal() +
   theme(legend.position = "bottom") +
   ylim(0,1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
