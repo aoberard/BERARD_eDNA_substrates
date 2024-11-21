@@ -146,10 +146,9 @@ edna_pfiltered %>%
 ## Euleur Plots ----
 
 #Choose data used for euleur plots ▲ 
-data_euler_sub <- edna_gfiltered 
+data_euler_sub <- edna_gpooled
 
-data_euler_pri <- edna_pfiltered 
-# attention, pas eu le pool des taxonomies ici pour primers : pas cools enleve l'interet un peu ----
+data_euler_pri <- edna_ppooled_taxmixed 
 
 ### For substrates ----
 
@@ -211,8 +210,8 @@ lfso <- substrates_area$count_intersect_affiliations[substrates_area$substrates 
 spso <- substrates_area$count_intersect_affiliations[substrates_area$substrates == "soil & spiderweb"]
 splfso <- substrates_area$count_intersect_affiliations[substrates_area$substrates == "leaf & soil & spiderweb"]
 
-# Fit euler plot
-fit <- eulerr::euler(c(
+#Fit euler plot
+euler_sub <- eulerr::euler(c(
   spiderweb = sp,
   leaf = lf,
   soil = so,
@@ -225,10 +224,10 @@ fit <- eulerr::euler(c(
 rm(sp, lf, so, splf, lfso, spso, splfso)
 
 #Draw euler plot
-plot(fit,
+plot(euler_sub,
      fills = palette_substrate,
      labels = list(
-       labels = c("Toile d'araignées", "Ecouvillons de feuilles", "Sol"),    
+       labels = c("Spiderweb", "Leaf swabs", "Soil"),    
        col = "gray20",                      
        font = 2,                           
        cex = 1.5                           
@@ -294,7 +293,7 @@ primers_area <- bind_rows(unique_to_each_primer, intersections)
 print(primers_area)
 
 # Fit euler plot
-fit <- eulerr::euler(c(
+euler_prim <- eulerr::euler(c(
   "12S" = primers_area$count_intersect_affiliations[primers_area$primer == "12SV5"],
   "16S" = primers_area$count_intersect_affiliations[primers_area$primer == "16Smam"],
   "12S&16S" = primers_area$count_intersect_affiliations[primers_area$primer == "12SV5 & 16Smam"]
@@ -302,7 +301,7 @@ fit <- eulerr::euler(c(
 
 #Draw euler plot
 
-plot(fit,
+plot(euler_prim,
      fills = palette_primers,
      labels = list(
        labels = c("12SV5", "16Smam"),    
@@ -379,21 +378,20 @@ rm(hist12s)
 rm(hist16s)
 
 
-
-
-
-# verif que code du debut ok car talpa = 3 zarbi
-
-
-
 ## Rarefaction curves ----
+
+#Choose data to use
+data_raref_p <- edna_pfiltered
+
+data_raref_g <- edna_gfiltered
+
 
 
 ### For each primers ----
 #Function to generate inext data
 generate_inext_data <- function(primer_type, substrates) {
   mapply(function(sub) {
-    df <- edna_pfiltered %>%
+    df <- data_raref_p %>%
       filter(primer == primer_type, substrate == sub) %>%
       mutate(sum_positive_replicate = if_else(sum_positive_replicate > 0, 1, 0)) %>%
       select(sample, final_affiliation, sum_positive_replicate) %>%
@@ -405,7 +403,7 @@ generate_inext_data <- function(primer_type, substrates) {
 }
 
 #Application of function 
-substrates_list <- edna_pfiltered$substrate %>% unique() 
+substrates_list <- data_raref_p$substrate %>% unique() 
 
 data_inext_ppooled <- list(
   "12SV5" = generate_inext_data("12SV5", substrates_list),
@@ -439,14 +437,11 @@ rm(curv_12s)
 rm(curv_16s)
 
 
-
-
-
 ### For both primers ----
 
 #Generate inext data from filtered pooled primers
 data_inext_gpooled <- lapply(substrates_list, function(sub) {
-  df <- edna_gfiltered %>%
+  df <- data_raref_g %>%
     filter(substrate == sub) %>%
     mutate(sum_positive_replicate = if_else(sum_positive_replicate > 0, 1, 0)) %>%
     select(sample, final_affiliation, sum_positive_replicate) %>%
@@ -466,22 +461,20 @@ inext_raw_gpooled <- iNEXT::iNEXT(data_inext_gpooled, q = 0, datatype = "inciden
 curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1) +
   scale_color_manual(values = palette_substrate) +
   scale_fill_manual(values = palette_substrate) +
-  ggtitle("Rarefaction Curve - 12SV5") +
+  ggtitle("Rarefaction Curve - Pooled 12Sv5 - 16Smam") +
   theme_minimal() +
   ylim(c(0,60))
 
 curv_gpooled
+rm(curv_gpooled)
 
-
-
-
-
-# attention regarder si ajout de 000 ! si pb ? gros biais et si corrigeable -----
-# + mettre au propre cette partie
-
+rm(data_raref_p)
+rm(data_raref_g)
 
 
 # Repeatability ----
+
+# reste a clean cette partie !!!!!!!!!!!!!!!!!!!!!!!!!!!----
 
 #Plot number of positive replicates for each substrates and affiliation level 
 edna_pfiltered %>%
@@ -605,24 +598,4 @@ edna_gfiltered_normalized %>%
 
 
 
-# RESTE A CORRIGER OU AUTRE : ----
-
-#pour gpooled : # pb de cluster qui apparaissent que dans un run et pas dans l'autre, l'autre tous negatifs à ça comment resoudre ?
-# et surtout NA dans les données si transformation matrice etc
-# apres avoir fait ça go clean l'autre debut de code, avoir des tableuaux consensus, en mode ute a changer le haut
-# pour savoir quelles primers utilisés (un, deux ou les deux)
-# et genre filtre ou quoi, si oui ou non activé (generer ariable true false pour chaque filtre et ensuite faire generation de la table utilisée partout ensutie)
-
-# euler plot deux à deux primers ?
-
-# Histogramme (nbr de sample positif a tous les taxons (en x les taxons)) pour chaque primer (sur meme graph, application de la couleur)
-
-
-#OBJECTIFS RESTANTS : 
-
-#pool 12s - 16s et faire analyse pooles (voir diffrence pris differement)
-# analyse replicabilité (notamment avec pool amorce pour max voulait voir - mais peut-être avec pourcentage plutot?)
-#analyse glm proba detection
-#diagramme venn pour affiliations amorces -avant et après pooling affiliations?)
-# boxplot dotplor de richesse par echantillon par substrat ? deja commence script linear model
 

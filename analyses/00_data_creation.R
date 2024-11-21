@@ -135,7 +135,7 @@ edna_ppooled <- all_edna %>%
 ### Mix affiliation from both primers ----
 
 # Conversion of final_affiliation and related taxonomy for shared taxa between primers
-edna_gpooled <- edna_ppooled %>%
+edna_ppooled_taxmixed <- edna_ppooled %>%
   mutate(final_affiliation = case_when( 
     final_affiliation == "Apodemus" ~ "Apodemus_sylvaticus",
     final_affiliation == "Aegithalos" ~ "Aegithalos_caudatus",
@@ -166,16 +166,16 @@ edna_gpooled <- edna_ppooled %>%
   ))
 
 #Regroup rows of shared taxa for each primers
-edna_gpooled <- edna_gpooled %>%
+edna_ppooled_taxmixed <- edna_ppooled_taxmixed %>%
   group_by(sample, primer, final_affiliation) %>%
   summarise(across(c(Class, Order, Family, Genus, Species), first),
-          sum_positive_replicate = max(sum_positive_replicate),      # choice of keeping only highest number of postive replicates
+          sum_positive_replicate = max(sum_positive_replicate),      # choice of keeping only highest number of positive replicates
           pooled_number = first(pooled_number),
           sum_reads = sum(sum_reads)) %>%
   ungroup()
 
 #Pool primers and generate columns to count positive replicates per primers
-edna_gpooled <- edna_gpooled %>%
+edna_gpooled <- edna_ppooled_taxmixed %>%
   mutate( sum_positive_replicate_12s = case_when( primer == "12SV5" ~ sum_positive_replicate, TRUE ~ 0)) %>%
   mutate( sum_positive_replicate_16s = case_when( primer == "16Smam" ~ sum_positive_replicate, TRUE ~ 0)) %>%
   group_by(sample, final_affiliation) %>%
