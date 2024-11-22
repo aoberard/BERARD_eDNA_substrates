@@ -184,7 +184,7 @@ edna_gpooled <- edna_ppooled_taxmixed %>%
             sum_positive_replicate_12s = sum(sum_positive_replicate_12s),
             sum_positive_replicate_16s = sum(sum_positive_replicate_16s),
             pooled_number = sum(pooled_number),
-            pooled_percent_positive = round(100*sum_positive_replicate / pooled_number, 0),
+            pooled_percent_positive = sum_positive_replicate / pooled_number,
             sum_reads = sum(sum_reads))
 
 #Check pooling

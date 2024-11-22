@@ -1,57 +1,134 @@
-
-
-
-
-
- # warning sur approche menée  !!!! ----
-# utiliser tests moyenne pour Sens de variation etc (post hoc test comme faisait christophe ) :
-#selon si ça marche bien leqs glms
-
-
- 
- # reflexion sur  GLM ---- 
- 
- #essayer amorces separement ou poolés, à échelle de replica ou de l'echantillon (echelle replica relou potetre si pas colonnes filtres faites debut)?
- 
- # si fait a echelle de replica c'est different notre analyse prend en compte la replicabilite dans la
- # probabilité de detection 
- # sinon prend notre proba de detecter pour un individu
- 
- # pas oublier de tester facteurs organisme effet combiné substrat
- 
- # modeles faisable :
- #logit 0/1 : proba de detection d'un vertebre
- # poisson ? : variation de la richesse detecte dans un echantillon ?
- 
- 
- # TRUC RANDOM A TROUVE PLACE OU SUPPR ----
- 
- all_edna$final_affiliation %>%
-   unique() %>%
-   .[!stringr::str_detect(., pattern = "[1-9]")] %>%
-   paste(collapse = ",") %>%
-   stringr::str_replace_all(pattern = "_", replacement = " ")
- 
- 
- 
-
- 
  # A FAIRE APRES DISCU MAX ET NATH ------
  
 # modeles 0/1 - proba de detaction
 # modele 1,2, 3 - replicabilité
  # faire sur data pooled, peut-être prendre en compte primer en tant que facteur aleatoire
+# dans ce cas, pas forcement besoin de prendre données poolés au niveau de l'echantillon, si ?
+
  # reflechir a si dans ce cas c'est genant le fait d'avoir pool (notamment car certaines affiliations existe pas pour certains primer, pas meme nombre de ligne au total (pas meme nombre de 0 - 1)), mais peut-être si met en facteur aleatoire c'est pg ?
  # le fait est que pool réduit nombre total de taxa (car pool plus filtr ensuite qui rabote le pool)
  
  
 # GLM ----
  
-## Approche par échantillon (réplicats poolés) ----
-### Amorces séparement ----
+
  
  
-#### 12s d'abord ----
+ ## Amorces ensembles ----
+ 
+ 
+# data glm creation ----
+class_to_ignore <- c("Lepidosauria", "Amphibia")
+ 
+d_glm_gpool_detect <- edna_gfiltered %>%
+   mutate(detection = if_else(sum_positive_replicate > 0, 1, 0)) %>%
+   filter (!Class %in% class_to_ignore)
+ 
+d_glm_gpool_replic <- edna_gfiltered %>%
+  filter(sum_positive_replicate > 0) %>%
+  filter (!Class %in% class_to_ignore)
+
+ 
+#modele logit
+
+# detection
+
+m_gpool_detect <- lme4::glmer(data = d_glm_gpool_detect,
+                              formula = detection ~ substrate * Class + (1|sample) + (1|final_affiliation),
+                              family = binomial(link = "logit"),
+                              na.action = "na.fail",
+                              control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+
+model_selection <- MuMIn::dredge(m_gpool_detect, rank = "AICc")
+model_selection %>% filter(delta <2)
+
+DHARMa::simulateResiduals(m_gpool_detect) %>%
+  DHARMa::testResiduals()
+
+summary(m_gpool_detect)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Repeatability
+
+  hist(d_glm_gpool_replic$sum_positive_replicate)
+
+
+m_gpool_replic <- lme4::glmer(data = d_glm_gpool_replic,
+                              formula = sum_positive_replicate ~ substrate * Class + (1|sample) + (1|final_affiliation) + (1|primer),
+                              family = poisson(link="log"),
+                              na.action="na.fail",
+                              control = lme4::glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5) ) )
+
+model_selection <- MuMIn::dredge(m_gpool_replic, rank = "AICc")
+model_selection %>% filter(delta <2)
+
+m_gpool_replic <- lme4::glmer(data = d_glm_gpool_replic,
+                              formula = sum_positive_replicate ~ substrate  + (1|sample) + (1|final_affiliation) + (1|primer),
+                              family = poisson(link="log"),
+                              na.action="na.fail",
+                              control = lme4::glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5) ) )
+
+DHARMa::simulateResiduals(m_gpool_replic) %>%
+  DHARMa::testResiduals()
+
+summary(m_gpool_replic)
+ 
+
+
+
+
+
+
+
+
+
+
+m_gpool_replic <-NA
+m_gpool_replic <- lme4::glmer(data = d_glm_gpool_replic,
+                              formula = (pooled_percent_positive) ~ substrate * Class + (1|sample) ,
+                              family = binomial(link = "logit"),
+                              weights = pooled_number,
+                              na.action = "na.fail",
+                              control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+
+model_selection <- MuMIn::dredge(m_gpool_replic, rank = "AICc")
+model_selection %>% filter(delta <2)
+
+m_gpool_replic <- lme4::glmer(data = d_glm_gpool_replic,
+                              formula = (pooled_percent_positive) ~ substrate + Class + (1|sample) ,
+                              family = binomial(link = "logit"),
+                              weights = pooled_number,
+                              na.action = "na.fail",
+                              control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+
+summary(m_gpool_replic)
+
+
+
+
+
+
+
+
+
+
+
+## Amorces séparement ----
+ 
+ 
+### 12s d'abord ----
  
 # data glm creation ----
 d_glm_12s <- edna_pfiltered %>%
@@ -138,6 +215,51 @@ model_selection %>% filter(delta <2)
  
 
 summary(m_logit)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
