@@ -391,7 +391,7 @@ hist16s <- data_hist %>%
 patchwork::wrap_plots(hist12s, hist16s, ncol = 1) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom") &
-  plot_annotation(title = "Histogram of Positive Samples by Primer")
+  plot_annotation(title = "Histogram of positive samples by primer")
 
 rm(data_hist)
 
@@ -506,7 +506,7 @@ edna_pfiltered %>%
   facet_grid(affiliation_level ~ primer) +
   scale_fill_manual(values = palette_substrate) +
   labs(
-    title = "Distribution of Positive Replicates by Affiliation, Primer, and Substrate",
+    title = "Distribution of positive Replicates by affiliation, primer, and substrate",
     x = "Number of positive replicates",
     y = "Count"
   ) +
@@ -527,7 +527,7 @@ edna_gfiltered %>%
   facet_grid(rows = vars(affiliation_level)) +
   scale_fill_manual(values = palette_substrate) +
   labs(
-    title = "Distribution of positive replicates by affiliation and substrate",
+    title = "Distribution of positive replicates by affiliation and substrate - with pooled primers",
     x = "Percentage of Positive Replicates",
     y = "Count"
   ) +
@@ -561,7 +561,7 @@ edna_pfiltered_normalized %>%
   facet_grid(affiliation_level ~ primer) +
   scale_fill_manual(values = palette_substrate) +
   labs(
-    title = "Distribution of Positive Replicates by Affiliation, Primer, and Substrate",
+    title = "Distribution of positive replicates by affiliation, primer, and substrate - with pooled primers",
     x = "Number of positive replicates",
     y = "Count"
   ) +

@@ -9,254 +9,118 @@
  # le fait est que pool réduit nombre total de taxa (car pool plus filtr ensuite qui rabote le pool)
  
  
-# GLM ----
- 
-
  
  
- ## Amorces ensembles ----
  
- 
-# data glm creation ----
+# GLMMs ----
 class_to_ignore <- c("Lepidosauria", "Amphibia")
  
-d_glm_gpool_detect <- edna_gfiltered %>%
-   mutate(detection = if_else(sum_positive_replicate > 0, 1, 0)) %>%
-   filter (!Class %in% class_to_ignore)
- 
-d_glm_gpool_replic <- edna_gfiltered %>%
-  filter(sum_positive_replicate > 0) %>%
+
+## Considering both primers ----
+
+### Model for detection probability ----
+
+#Create data used in the glm
+d_glm_detect <- edna_gfiltered %>%
+  mutate(detection = if_else(sum_positive_replicate > 0, 1, 0)) %>%
   filter (!Class %in% class_to_ignore)
 
- 
-#modele logit
-
-# detection
-
-m_gpool_detect <- lme4::glmer(data = d_glm_gpool_detect,
+#Global model specification
+m_detect <- lme4::glmer(data = d_glm_detect,
                               formula = detection ~ substrate * Class + (1|sample) + (1|final_affiliation),
                               family = binomial(link = "logit"),
                               na.action = "na.fail",
                               control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
 
-model_selection <- MuMIn::dredge(m_gpool_detect, rank = "AICc")
+#Model selection
+model_selection <- MuMIn::dredge(m_detect, rank = "AICc")
 model_selection %>% filter(delta <2)
 
-DHARMa::simulateResiduals(m_gpool_detect) %>%
+#Best model specification
+m_detect <- lme4::glmer(data = d_glm_detect,
+                              formula = detection ~ substrate * Class + (1|sample) + (1|final_affiliation),
+                              family = binomial(link = "logit"),
+                              na.action = "na.fail",
+                              control = lme4::glmerControl( optimizer = "bobyqa", optCtrl = list(maxfun=2e5) ) )
+
+#Best model validation
+DHARMa::simulateResiduals(m_detect) %>%
   DHARMa::testResiduals()
 
-summary(m_gpool_detect)
+#Best model look
+summary(m_detect)
+
+em <- emmeans::emmeans(m_detect, ~ substrate | Class)
+plot(em, comparisons = TRUE)
+emmeans::contrast(em, "pairwise", adjust = "Tukey")
+
+ggstats::ggcoef_model(m_detect)
 
 
+### Model for repeatability ----
 
+#Create data used in the glm
+d_glm_replic <- edna_gfiltered %>%
+  filter(sum_positive_replicate > 0) %>%
+  filter (!Class %in% class_to_ignore)
 
+hist(d_glm_replic$pooled_percent_positive)
+d_glm_replic$pooled_percent_positive %>%
+  unique()
 
-
-
-
-
-
-
-
-
-
-# Repeatability
-
-  hist(d_glm_gpool_replic$sum_positive_replicate)
-
-
-m_gpool_replic <- lme4::glmer(data = d_glm_gpool_replic,
-                              formula = sum_positive_replicate ~ substrate * Class + (1|sample) + (1|final_affiliation) + (1|primer),
-                              family = poisson(link="log"),
-                              na.action="na.fail",
-                              control = lme4::glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5) ) )
-
-model_selection <- MuMIn::dredge(m_gpool_replic, rank = "AICc")
-model_selection %>% filter(delta <2)
-
-m_gpool_replic <- lme4::glmer(data = d_glm_gpool_replic,
-                              formula = sum_positive_replicate ~ substrate  + (1|sample) + (1|final_affiliation) + (1|primer),
-                              family = poisson(link="log"),
-                              na.action="na.fail",
-                              control = lme4::glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5) ) )
-
-DHARMa::simulateResiduals(m_gpool_replic) %>%
-  DHARMa::testResiduals()
-
-summary(m_gpool_replic)
- 
-
-
-
-
-
-
-
-
-
-
-m_gpool_replic <-NA
-m_gpool_replic <- lme4::glmer(data = d_glm_gpool_replic,
+#Global model specification
+m_replic <- lme4::glmer(data = d_glm_replic,
                               formula = (pooled_percent_positive) ~ substrate * Class + (1|sample) ,
                               family = binomial(link = "logit"),
                               weights = pooled_number,
                               na.action = "na.fail",
-                              control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+                              control = lme4::glmerControl( optimizer = "bobyqa", optCtrl = list(maxfun=2e5) ) )
 
-model_selection <- MuMIn::dredge(m_gpool_replic, rank = "AICc")
+#Model selection
+model_selection <- MuMIn::dredge(m_replic, rank = "AICc")
 model_selection %>% filter(delta <2)
 
-m_gpool_replic <- lme4::glmer(data = d_glm_gpool_replic,
+#Best model specification
+m_replic <- lme4::glmer(data = d_glm_replic,
                               formula = (pooled_percent_positive) ~ substrate + Class + (1|sample) ,
                               family = binomial(link = "logit"),
                               weights = pooled_number,
                               na.action = "na.fail",
-                              control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+                              control = lme4::glmerControl( optimizer = "bobyqa", optCtrl = list(maxfun=2e5) ) )
 
-summary(m_gpool_replic)
-
-
-
-
-
-
-
-
-
-
-
-## Amorces séparement ----
- 
- 
-### 12s d'abord ----
- 
-# data glm creation ----
-d_glm_12s <- edna_pfiltered %>%
-   mutate(detection = if_else(sum_positive_replicate > 0, 1, 0)) %>%
-   filter(primer == "16Smam") %>%
-  filter (!Class %in% c("Lepidosauria", "Amphibia"))
-
-  
- 
-# MODELE LOGIT
- 
-m_logit_12s <- lme4::glmer(data = d_glm_12s,
-                            formula = detection ~ substrate * Class + (1|sample),
-                            family = binomial(link = "logit"),
-                            na.action = "na.fail",
-                            control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
- 
-model_selection <- MuMIn::dredge(m_logit_12s, rank = "AICc")
-model_selection %>% filter(delta <2)
-
-DHARMa::simulateResiduals(m_logit_12s) %>%
+#Best model validation
+DHARMa::simulateResiduals(m_replic) %>%
   DHARMa::testResiduals()
 
-summary(m_logit_12s)
 
-em <- emmeans::emmeans(m_logit_12s, ~ substrate | Class)
-em
+
+########################## pas terriblement ajustement
+
+#beta
+m_replic <- glmmTMB::glmmTMB(pooled_percent_positive ~ substrate + Class + (1|sample),
+                               family = betabinomial(link = "logit"),
+                               weights = pooled_number,
+                               data = d_glm_replic)
+
+
+summary(m_replic)
+ 
+em <- emmeans::emmeans(m_replic, ~ substrate | Class)
 plot(em, comparisons = TRUE)
 emmeans::contrast(em, "pairwise", adjust = "Tukey")
 
-
-# MODELE RICHESSE ?
-
- 
-#Calculate number of positive clusters per sample - substrate - primer
-summary_detections_12 <- edna_pfiltered %>%
-  filter(primer == "12SV5") %>%
-  group_by(primer, substrate, sample) %>%
-  summarise(richness = sum(sum_positive_replicate > 0)) 
- 
-#
-
-m_rich_12 <- lme4::glmer(
-  data = summary_detections_12,
-  formula = richness ~ substrate + (1|sample),
-  family = poisson(link="log"),
-  na.action="na.fail",
-  control = lme4::glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=2e5))
-)
- 
-model_selection <- MuMIn::dredge(m_rich_12, rank = "AICc")
-model_selection %>% filter(delta <2)
-
-DHARMa::simulateResiduals(m_rich_12) %>%
-  DHARMa::testResiduals()
-
-m_rich_12 |>
-  RVAideMemoire::overdisp.glmer()
- 
-summary(m_rich_12)
- 
- 
- 
- 
-   
-   
-   
-   
-# TEST AU PIF
- 
-d_glm <- edna_pfiltered %>%
-  mutate(detection = if_else(sum_positive_replicate > 0, 1, 0)) %>%
-  filter (!Class %in% c("Lepidosauria", "Amphibia"))
-
-
-m_logit <- lme4::glmer(data = d_glm,
-                           formula = detection ~ substrate * Class + primer + (1|sample),
-                           family = binomial(link = "logit"),
-                           na.action = "na.fail",
-                           control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
-
-model_selection <- MuMIn::dredge(m_logit, rank = "AICc")
-model_selection %>% filter(delta <2)
- 
-
-summary(m_logit)
+ggstats::ggcoef_model(m_replic)
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+m_replic <- lme4::glmer(data = d_glm_replic,
+                        formula = (pooled_percent_positive) ~ substrate * Class + (1|sample) ,
+                        family = quasibinomial,
+                        weights = pooled_number,
+                        na.action = "na.fail",
+                        control = lme4::glmerControl( optimizer = "bobyqa", optCtrl = list(maxfun=2e5) ) )
 
 
 
@@ -281,8 +145,8 @@ summary_detections_12 <- edna_pfiltered %>%
 
 #Post-hoc comparisons (comparaisons 2 à 2 pour variables à plus de 2 modalités)
 attach(summary_detections_12)
-TukeyStep1<-aov(detections ~ substrate) #utiliser test de Tukey pour obtenir différence entre groupes (step1)
-TukeyHSD(TukeyStep1,'substrate') #utiliser test de Tukey pour obtenir différence entre groupes (step2)
+TukeyStep1<-aov(detections ~ substrate) #(step1)
+TukeyHSD(TukeyStep1,'substrate') #(step2)
 pairwise.wilcox.test(detections, substrate,p.adjust.method = "holm", paired = FALSE) #for p-values
 detach(summary_detections_12)
 
