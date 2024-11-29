@@ -56,8 +56,12 @@ emmeans::contrast(em, "pairwise", adjust = "Tukey")
 
 ggstats::ggcoef_model(m_detect)
 
+gtsummary::tbl_regression(m_detect)
 
 ### Model for repeatability ----
+
+################ ca fit pas bin ----
+
 
 #Create data used in the glm
 d_glm_replic <- edna_gfiltered %>%
