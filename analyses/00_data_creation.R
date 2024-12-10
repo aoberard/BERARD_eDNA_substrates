@@ -5,6 +5,32 @@ library(readxl)
 library(dplyr)
 library(stringr)
 
+## Parameters ----
+
+#Filtering choices
+filter_onlyzoo <- TRUE
+filter_zoo <- FALSE
+filter_conta <- FALSE
+filter_human <- TRUE
+filter_domestic <- FALSE
+filter_affiliation_level <- TRUE
+
+#Variable to identify possible domestic taxa
+domestic_affiliation_names <- c("Sus_scrofa",
+                                "Gallus_gallus",
+                                "Bos_taurus",
+                                "Capra_hircus",
+                                "Ovis_aries",
+                                "Canis_lupus",
+                                "Equus_caballus",
+                                "Meleagris_gallopavo",
+                                "Oryctolagus_cuniculus")
+#Phasianus_colchicus, Numida_meleagris and Alectoris_rufa can be bred by humans
+#but are not considered to be domestic animals here, as their presence here probably comes from free-ranging individuals.
+
+
+## Import files ----
+
 #Manually corrected abundance files
 raw_12s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.10.30_12SV5_eDNA_abundance_samplecorrected.xlsx"))
 raw_16s_abundance <- readxl::read_excel(here::here("data/raw-data/2024.11.10_16Smam_eDNA_abundance_samplecorrected.xlsx"))
@@ -119,6 +145,7 @@ all_edna <- all_edna %>%
   mutate(positive_replicate = case_when(reads > 0 ~ 1, 
                                         reads == 0 ~ 0))
 
+
 ## Pooling for each primiers ----
 #Pooling per samples-cluster-primer
 edna_ppooled <- all_edna %>%
@@ -194,12 +221,6 @@ unique(edna_gpooled$sum_positive_replicate) #should be above 6
 
 # Filter data ----
 
-## Filter choice ▲ ----
-filter_zoo <- TRUE
-filter_conta <- TRUE
-filter_domestic <- TRUE
-filter_affiliation_level <- TRUE
-
 ## Variable creation for data filtering ----
 #New columns are created in order to make choice about which rows to consider for further analysis
 
@@ -218,19 +239,6 @@ edna_ppooled <- edna_ppooled %>%
     stringr::str_detect(sample, "WEB") ~ "spiderweb",
     .default = "other"
   ))
-
-#Variable to identify possible domestic taxa
-domestic_affiliation_names <- c("Sus_scrofa",
-                                "Gallus_gallus",
-                                "Bos_taurus",
-                                "Capra_hircus",
-                                "Ovis_aries",
-                                "Canis_lupus",
-                                "Equus_caballus",
-                                "Meleagris_gallopavo"
-)
-#Phasianus_colchicus, Numida_meleagris and Alectoris_rufa can be bred by humans
-#but are not considered to be domestic animals here, as their presence here probably comes from free-ranging individuals.
 
 edna_gpooled <- edna_gpooled %>%
   mutate(domestic = final_affiliation %in% domestic_affiliation_names)
@@ -268,6 +276,14 @@ edna_ppooled <- edna_ppooled %>%
 edna_pfiltered <- edna_ppooled
 edna_gfiltered <- edna_gpooled
 
+if (filter_onlyzoo) {
+  edna_pfiltered <- edna_pfiltered %>%
+    filter(in_zoo == TRUE)
+  
+  edna_gfiltered <- edna_gfiltered %>%
+    filter(in_zoo == TRUE)
+}
+
 if (filter_zoo) {
   edna_pfiltered <- edna_pfiltered %>%
     filter(in_zoo == FALSE)
@@ -278,10 +294,18 @@ if (filter_zoo) {
 
 if (filter_conta) {
   edna_pfiltered <- edna_pfiltered %>%
-    filter(!final_affiliation %in% c("Homo_sapiens", "Sardina_pilchardus"))
+    filter(!final_affiliation %in% c("Sardina_pilchardus"))
   
   edna_gfiltered <- edna_gfiltered %>%
-    filter(!final_affiliation %in% c("Homo_sapiens", "Sardina_pilchardus"))
+    filter(!final_affiliation %in% c("Sardina_pilchardus"))
+}
+
+if (filter_human) {
+  edna_pfiltered <- edna_pfiltered %>%
+    filter(!final_affiliation %in% c("Homo_sapiens"))
+  
+  edna_gfiltered <- edna_gfiltered %>%
+    filter(!final_affiliation %in% c("Homo_sapiens"))
 }
 
 if (filter_domestic) {

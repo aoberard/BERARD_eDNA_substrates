@@ -11,7 +11,7 @@ library(patchwork)
 ## Graphical parameters ----
 
 #Define colors for each substrate
-palette_substrate <- c("spiderweb" = "#66c2a5AA", "leaf" = "#fc8d62AA", "soil" = "#FFD700AA")
+palette_substrate <- c("spiderweb" = "#36c296AA", "leaf" = "#fa6f45AA", "soil" = "#fadc21AA")
 palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smam" = "#A2D1D1AA")
 
 
@@ -23,7 +23,7 @@ palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smam" = "#A2D1D1AA")
 #Choose data on which to check quality (global data with small modifications)
 data_quality_check <- all_edna %>%
   filter(!stringr::str_detect(sample, "ZOO")) 
-  # %>% filter(final_affiliation == "Homo_sapiens")       # possible filtering for human (ubiquitous contamination)
+  # %>% filter(final_affiliation != "Homo_sapiens")       # possible filtering for human (ubiquitous contamination)
 
 #Calculate possible reads threshold values
 threshold_values <- seq(0,
@@ -98,8 +98,6 @@ quality_variation %>%
   filter(reads_quality_threshold == chosen_quality_threshold)
 
 
-
-
 # Final taxonomic affiliations ----
 
 ## Descriptive numbers ----
@@ -141,6 +139,13 @@ edna_pfiltered %>%
   group_by(substrate, Class) %>%
   summarise(distinct_affiliation = n_distinct(final_affiliation), .groups = 'drop') %>%
   tidyr::complete(substrate, Class, fill = list(distinct_affiliation = 0))
+
+# Example of OTU affiliation list
+edna_ppooled %>%
+  filter(sum_positive_replicate > 0) %>%      
+  group_by(primer) %>%                        
+  distinct(final_affiliation) %>%             
+  ungroup() 
 
 
 ## Euleur Plots ----

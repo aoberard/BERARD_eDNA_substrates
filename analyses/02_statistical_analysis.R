@@ -58,6 +58,12 @@ ggstats::ggcoef_model(m_detect)
 
 gtsummary::tbl_regression(m_detect)
 
+
+
+
+
+
+
 ### Model for repeatability ----
 
 ################ ca fit pas bin ----
