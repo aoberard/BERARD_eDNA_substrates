@@ -17,12 +17,9 @@
 class_to_ignore <- c("Lepidosauria", "Amphibia")
 
  
- 
 # GLMMs ----
 
-## Considering both primers pooled replicates ----
-
-### Model for detection probability ----
+## Model for detection probability ----
 
 #Create data used in the glm
 d_glm_detect <- edna_gfiltered %>%
@@ -63,7 +60,7 @@ ggstats::ggcoef_model(m_detect_best)
 gtsummary::tbl_regression(m_detect_best)
 
 
-### New model repeatability ----
+## Model for within sample repeatability ----
 #Create data used in the glm (only positive here)
 d_glm_repeat <- edna_gfiltered %>%
   filter(sum_reads > 0) %>%
@@ -71,7 +68,7 @@ d_glm_repeat <- edna_gfiltered %>%
 
 #Global model specification
 m_repeat <- lme4::glmer(data = d_glm_repeat,
-                        formula = within_repeated_positive ~ substrate + Class + (1|sample),
+                        formula = within_repeated_positive ~ substrate + (1|sample),
                         family = binomial(link = "logit"),
                         na.action = "na.fail",
                         control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
@@ -82,7 +79,7 @@ model_selection %>% filter(delta <2)
 
 #Best model specification
 m_repeat_best <- lme4::glmer(data = d_glm_repeat,
-                        formula = within_repeated_positive ~ substrate + Class + (1|sample),
+                        formula = within_repeated_positive ~ substrate + (1|sample),
                         family = binomial(link = "logit"),
                         na.action = "na.fail",
                         control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
@@ -90,7 +87,6 @@ m_repeat_best <- lme4::glmer(data = d_glm_repeat,
 #Best model validation
 DHARMa::simulateResiduals(m_repeat_best) %>%
   DHARMa::testResiduals()
-
 
 #Best model look
 summary(m_repeat_best)
