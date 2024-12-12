@@ -24,8 +24,8 @@ class_order <- c("Aves", "Mammalia", "Amphibia", "Lepidosauria")
 #We are seeking for the number of replicates and samples per primer and substrate under possible quality thresholds
 
 #Choose data on which to check quality (global data with small modifications)
-data_quality_check <- all_edna %>%
-  filter(!stringr::str_detect(sample, "ZOO")) 
+data_quality_check <- all_edna  # %>%
+  # filter(!stringr::str_detect(sample, "ZOO")) 
   # %>% filter(final_affiliation != "Homo_sapiens")       # possible filtering for human (ubiquitous contamination)
 
 #Calculate possible reads threshold values
@@ -36,7 +36,7 @@ threshold_values <- seq(0,
                                     .groups = "drop" ) %>%
                           pull(total_reads) %>%
                           max(),
-                        by = 100)
+                        by = 500)
 
 #For each threshold_values, calculate replicate and sample counts under it
 quality_variation <- map_df(threshold_values, function(threshold) {

@@ -63,8 +63,7 @@ gtsummary::tbl_regression(m_detect_best)
 ## Model for within sample repeatability ----
 #Create data used in the glm (only positive here)
 d_glm_repeat <- edna_gfiltered %>%
-  filter(sum_reads > 0) %>%
-  filter(!Class %in% class_to_ignore)
+  filter(sum_reads > 0) 
 
 #Global model specification
 m_repeat <- lme4::glmer(data = d_glm_repeat,
