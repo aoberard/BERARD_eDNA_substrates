@@ -173,7 +173,7 @@ edna_ppooled_taxmixed <- edna_ppooled %>%
     final_affiliation == "Bufonidae" ~ "Bufo",
     final_affiliation %in% c("Turdus_philomelos","Turdus_merula") ~ "Turdus",
     final_affiliation %in% c("Corvus","Pica_pica") ~ "Corvidae",
-    final_affiliation %in% c("Columba_livia", "Columba_palumbus") ~ "Columbidae",
+    final_affiliation %in% c("Columba_livia", "Columba_palumbus") ~ "Columba",
     final_affiliation == "Passeriformes" ~ "Passeriformes_3",
     TRUE ~ final_affiliation
   )) %>%
@@ -184,13 +184,13 @@ edna_ppooled_taxmixed <- edna_ppooled %>%
     final_affiliation == "Sturnus_vulgaris" ~ "Sturnus_vulgaris",
     final_affiliation == "Turdus" ~ "Multi-affiliation",
     final_affiliation == "Corvidae" ~ "Multi-affiliation",
-    final_affiliation == "Columbidae" ~ "Multi-affiliation",
+    final_affiliation == "Columba" ~ "Multi-affiliation",
     TRUE ~ Species
   )) %>%
   mutate(Genus = case_when(
     final_affiliation == "Bufo" ~ "Bufo",
+    final_affiliation == "Columba" ~  "Columba",
     final_affiliation == "Corvidae" ~ "Multi-affiliation",
-    final_affiliation == "Columbidae" ~  "Multi-affiliation",
     TRUE ~ Genus
   ))
 

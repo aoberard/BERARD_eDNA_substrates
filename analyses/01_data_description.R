@@ -101,6 +101,13 @@ quality_variation %>%
 
 ## Descriptive numbers ----
 
+#Percent of positive samples replicated by more than half of technical replicates
+edna_pfiltered %>%
+  filter(sum_reads >0) %>%
+  group_by(primer, substrate) %>%
+  summarise(percent_within_repeated = 100 *sum(within_repeated_positive) / n(),
+            effectif = n() )
+
 #Total number of distinct affiliation  per primers
 edna_ppooled %>%
   filter(sum_positive_replicate > 0) %>%
@@ -713,42 +720,6 @@ edna_gfiltered_normalized %>%
   theme(legend.position = "bottom") +
   ylim(0,1)
 
-
-
-
-# WORK IN PROGRESS ------
-## Sample with repeated affiliation within sample ----
-
-edna_pfiltered_repeatability <- edna_pfiltered %>%
-  filter(sum_positive_replicate > 0) %>%
-  mutate(within_repeated_positive = if_else(sum_positive_replicate > 1, 1, 0)) %>%
-  relocate(within_repeated_positive, .after = sum_positive_replicate)
-
-# Descriptive percent number
-edna_pfiltered_repeatability %>%
-  group_by(primer, substrate) %>%
-  summarise(percent_within_repeated = sum(within_repeated_positive) / n(),
-            effectif = n() )
-
-# presque on peut faire un modele 0 / 1 logistique sur ce truc 1 plus de 1 replicat, 0 : seul replicat snif
-# Le probleme c'est que pas cool de faire sur gfiltered parce que y'a parfois 6 replicas, donc faudrait 
-# faire marqueurs par marqueurs pour ce truc
-
-
-# WORK IN PROGRESSSSSS TELETRAVAIL VERSION ----
-temp <- edna_gfiltered %>%
-  mutate(within_replicated = if_else(pooled_percent_positive >= 0.5, 1, 0) ) 
-
-# a faire jsp dans quel script mais pas ici for sure
-temp <- temp %>%
-  filter(sum_reads > 0)
-
-# l'autre table + besoin ajouter relocate
-temp2 <- edna_pfiltered %>%
-  mutate(within_replicated = if_else(sum_positive_replicate > 1, 1, 0) ) 
-
-temp2 <- temp2 %>%
-  filter(sum_reads > 0)
 
 
 
