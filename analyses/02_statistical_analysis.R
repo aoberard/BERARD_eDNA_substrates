@@ -1,20 +1,24 @@
- # A FAIRE APRES DISCU MAX ET NATH ------
+# A FAIRE APRES DISCU MAX ET NATH ------
  
 # modeles 0/1 - proba de detaction
-# modele 1,2, 3 - replicabilité
- # faire sur data pooled, peut-être prendre en compte primer en tant que facteur aleatoire
+# faire sur data pooled, peut-être prendre en compte primer en tant que facteur aleatoire
 # dans ce cas, pas forcement besoin de prendre données poolés au niveau de l'echantillon, si ?
 
- # reflechir a si dans ce cas c'est genant le fait d'avoir pool (notamment car certaines affiliations existe pas pour certains primer, pas meme nombre de ligne au total (pas meme nombre de 0 - 1)), mais peut-être si met en facteur aleatoire c'est pg ?
- # le fait est que pool réduit nombre total de taxa (car pool plus filtr ensuite qui rabote le pool)
+# reflechir a si dans ce cas c'est genant le fait d'avoir pool (notamment car certaines affiliations existe pas pour certains primer, pas meme nombre de ligne au total (pas meme nombre de 0 - 1)), mais peut-être si met en facteur aleatoire c'est pg ?
+# le fait est que pool réduit nombre total de taxa (car pool plus filtr ensuite qui rabote le pool)
  
+# Script set-up ----
  
- 
+## Library and functions ----
+ library(ggplot2)
+ library(dplyr)
+
+## Parameters ----
+class_to_ignore <- c("Lepidosauria", "Amphibia")
+
  
  
 # GLMMs ----
-class_to_ignore <- c("Lepidosauria", "Amphibia")
- 
 
 ## Considering both primers pooled replicates ----
 
@@ -37,26 +41,26 @@ model_selection <- MuMIn::dredge(m_detect, rank = "AICc")
 model_selection %>% filter(delta <2)
 
 #Best model specification
-m_detect <- lme4::glmer(data = d_glm_detect,
+m_detect_best <- lme4::glmer(data = d_glm_detect,
                               formula = detection ~ substrate * Class + (1|sample) + (1|final_affiliation),
                               family = binomial(link = "logit"),
                               na.action = "na.fail",
                               control = lme4::glmerControl( optimizer = "bobyqa", optCtrl = list(maxfun=2e5) ) )
 
 #Best model validation
-DHARMa::simulateResiduals(m_detect) %>%
+DHARMa::simulateResiduals(m_detect_best) %>%
   DHARMa::testResiduals()
 
 #Best model look
-summary(m_detect)
+summary(m_detect_best)
 
-em <- emmeans::emmeans(m_detect, ~ substrate | Class)
+em <- emmeans::emmeans(m_detect_best, ~ substrate | Class)
 plot(em, comparisons = TRUE)
 emmeans::contrast(em, "pairwise", adjust = "Tukey")
 
-ggstats::ggcoef_model(m_detect)
+ggstats::ggcoef_model(m_detect_best)
 
-gtsummary::tbl_regression(m_detect)
+gtsummary::tbl_regression(m_detect_best)
 
 
 
@@ -135,12 +139,13 @@ m_replic <- lme4::glmer(data = d_glm_replic,
 
 ### New model repeatability ----
 #Create data used in the glm (only positive here)
-d_glm_repeat <- edna_pfiltered %>%
-  mutate(sum_reads > 0)
+d_glm_repeat <- edna_gfiltered %>%
+  filter(sum_reads > 0) %>%
+  filter(!Class %in% class_to_ignore)
 
 #Global model specification
 m_repeat <- lme4::glmer(data = d_glm_repeat,
-                        formula = within_repeated_positive ~ substrate * Class + (1|sample),
+                        formula = within_repeated_positive ~ substrate + Class + (1|sample),
                         family = binomial(link = "logit"),
                         na.action = "na.fail",
                         control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
@@ -149,29 +154,28 @@ m_repeat <- lme4::glmer(data = d_glm_repeat,
 model_selection <- MuMIn::dredge(m_repeat, rank = "AICc")
 model_selection %>% filter(delta <2)
 
-
 #Best model specification
-m_repeat <- lme4::glmer(data = d_glm_repeat,
-                        formula = within_repeated_positive ~ substrate + primer + (1|sample),
+m_repeat_best <- lme4::glmer(data = d_glm_repeat,
+                        formula = within_repeated_positive ~ substrate + Class + (1|sample),
                         family = binomial(link = "logit"),
                         na.action = "na.fail",
                         control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
 
 #Best model validation
-DHARMa::simulateResiduals(m_repeat) %>%
+DHARMa::simulateResiduals(m_repeat_best) %>%
   DHARMa::testResiduals()
 
 
 #Best model look
-summary(m_repeat)
+summary(m_repeat_best)
 
-em <- emmeans::emmeans(m_repeat, ~ substrate )
+em <- emmeans::emmeans(m_repeat_best, ~ substrate )
 plot(em, comparisons = TRUE)
 emmeans::contrast(em, "pairwise", adjust = "Tukey")
 
-ggstats::ggcoef_model(m_repeat)
+ggstats::ggcoef_model(m_repeat_best)
 
-gtsummary::tbl_regression(m_repeat)
+gtsummary::tbl_regression(m_repeat_best)
 
 
 

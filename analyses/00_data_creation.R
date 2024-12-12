@@ -277,7 +277,7 @@ edna_ppooled <- edna_ppooled %>%
 #Variable to identify affiliation repeated in more than half of replicates for each sample
 edna_gpooled <- edna_gpooled %>%
   mutate(within_repeated_positive = if_else(pooled_percent_positive >= 0.5, 1, 0) ) %>%
-  relocate(within_repeated_positive, .after = sum_positive_replicate)
+  relocate(within_repeated_positive, .after = pooled_percent_positive)
 
 edna_ppooled <- edna_ppooled %>%  
   mutate(within_repeated_positive = if_else(sum_positive_replicate > 1, 1, 0)) %>%

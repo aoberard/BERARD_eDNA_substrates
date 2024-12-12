@@ -91,7 +91,6 @@ ggplot(quality_variation, aes(x = reads_quality_threshold, y = sample_count, col
   theme_minimal() +
   theme(legend.position = "bottom")
 
-
 #Number of replicates and samples per primer and substrate under a chosen quality thresholds 
 chosen_quality_threshold <- 1000
 quality_variation %>%
@@ -192,7 +191,7 @@ edna_gfiltered %>%
 ## Euleur Plots ----
 
 #Choose data used for euleur plots ▲ 
-data_euler_sub <- edna_gpooled
+data_euler_sub <- edna_gfiltered
 
 data_euler_pri <- edna_ppooled_taxmixed 
 
@@ -379,14 +378,16 @@ edna_gpooled  %>%
   group_by(sample, substrate) %>%
   summarise(distinct_affiliation =  n_distinct(final_affiliation),
             .groups = "drop") %>%
-  ggplot(aes(x = distinct_affiliation, y = substrate, fill = substrate)) +
-  ggridges::geom_density_ridges(alpha = 0.7, scale = 1) +         
+  ggplot(aes(x = distinct_affiliation, y = substrate, fill = substrate, color = substrate)) +
+  ggridges::geom_density_ridges(alpha = 0.6, scale = 1.5, rel_min_height = 0.01) +
   scale_fill_manual(values = palette_substrate) +
+  scale_color_manual(values = palette_substrate) +
   labs(
-    title = "Distribution of distinct affiliations across substrates",
+    title = "Distribution of distinct affiliations across substrates for positive samples",
     x = "Number of distinct affiliations",
     y = "Substrate",
-    fill = "Substrate"
+    fill = "Substrate",
+    color = "Substrate"
   ) +
   theme_minimal() +
   theme(
@@ -499,6 +500,8 @@ ggplot(data_hist_combined, aes(x = final_affiliation, y = total_count, fill = su
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "bottom"
   ) 
+
+rm(data_hist2)
 
 
 ## Rarefaction curves ----
