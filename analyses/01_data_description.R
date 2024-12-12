@@ -609,3 +609,26 @@ edna_gfiltered_normalized %>%
   theme_minimal() +
   theme(legend.position = "bottom") +
   ylim(0,1)
+
+
+
+
+# WORK IN PROGRESS ------
+## Sample with repeated affiliation within sample ----
+
+edna_pfiltered_repeatability <- edna_pfiltered %>%
+  filter(sum_positive_replicate > 0) %>%
+  mutate(within_repeated_positive = if_else(sum_positive_replicate > 1, 1, 0)) %>%
+  relocate(within_repeated_positive, .after = sum_positive_replicate)
+
+# Descriptive percent number
+edna_pfiltered_repeatability %>%
+  group_by(primer, substrate) %>%
+  summarise(percent_within_repeated = sum(within_repeated_positive) / n(),
+            effectif = n() )
+
+# presque on peut faire un modele 0 / 1 logistique sur ce truc 1 plus de 1 replicat, 0 : seul replicat snif
+# Le probleme c'est que pas cool de faire sur gfiltered parce que y'a parfois 6 replicas, donc faudrait 
+# faire marqueurs par marqueurs pour ce truc
+
+

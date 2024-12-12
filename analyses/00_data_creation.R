@@ -8,8 +8,8 @@ library(stringr)
 ## Parameters ----
 
 #Filtering choices
-filter_onlyzoo <- TRUE
-filter_zoo <- FALSE
+filter_onlyzoo <- FALSE
+filter_zoo <- TRUE
 filter_conta <- FALSE
 filter_human <- TRUE
 filter_domestic <- FALSE
@@ -25,6 +25,7 @@ domestic_affiliation_names <- c("Sus_scrofa",
                                 "Equus_caballus",
                                 "Meleagris_gallopavo",
                                 "Oryctolagus_cuniculus")
+
 #Phasianus_colchicus, Numida_meleagris and Alectoris_rufa can be bred by humans
 #but are not considered to be domestic animals here, as their presence here probably comes from free-ranging individuals.
 

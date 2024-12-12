@@ -16,7 +16,7 @@
 class_to_ignore <- c("Lepidosauria", "Amphibia")
  
 
-## Considering both primers ----
+## Considering both primers pooled replicates ----
 
 ### Model for detection probability ----
 
@@ -131,6 +131,54 @@ m_replic <- lme4::glmer(data = d_glm_replic,
                         weights = pooled_number,
                         na.action = "na.fail",
                         control = lme4::glmerControl( optimizer = "bobyqa", optCtrl = list(maxfun=2e5) ) )
+
+
+## Considering both primers but without pooled replicates ----
+#Create data used in the glm
+d_glm_repeat <- edna_pfiltered_repeatability 
+
+
+#Global model specification
+m_repeat <- lme4::glmer(data = d_glm_repeat,
+                        formula = within_repeated_positive ~ substrate * Class + (1|sample),
+                        family = binomial(link = "logit"),
+                        na.action = "na.fail",
+                        control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+
+#Model selection
+model_selection <- MuMIn::dredge(m_repeat, rank = "AICc")
+model_selection %>% filter(delta <2)
+
+
+#Best model specification
+m_repeat <- lme4::glmer(data = d_glm_repeat,
+                        formula = within_repeated_positive ~ substrate + primer + (1|sample),
+                        family = binomial(link = "logit"),
+                        na.action = "na.fail",
+                        control = lme4::glmerControl( optimizer="bobyqa", optCtrl=list(maxfun=2e5) ) )
+
+#Best model validation
+DHARMa::simulateResiduals(m_repeat) %>%
+  DHARMa::testResiduals()
+
+
+#Best model look
+summary(m_repeat)
+
+em <- emmeans::emmeans(m_repeat, ~ substrate )
+plot(em, comparisons = TRUE)
+emmeans::contrast(em, "pairwise", adjust = "Tukey")
+
+ggstats::ggcoef_model(m_repeat)
+
+gtsummary::tbl_regression(m_repeat)
+
+
+
+
+
+
+
 
 
 
