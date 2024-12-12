@@ -53,7 +53,7 @@ quality_variation <- map_df(threshold_values, function(threshold) {
       .groups = "drop"
     ) %>%
     ungroup() %>%
-    filter(total_reads <= threshold) %>%
+    filter(total_reads < threshold) %>%
     group_by(primer, substrate) %>%
     summarise(
       replicate_count = n(),             
@@ -120,25 +120,35 @@ edna_ppooled %>%
   group_by(substrate, primer) %>%
   summarise(distinct_affiliation =  n_distinct(final_affiliation)) 
 
-# After filters total number of distinct affiliation  per substrate - primers
+#After filters total number of distinct affiliation  per substrate - primers
 edna_pfiltered %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(substrate, primer) %>%
   summarise(distinct_affiliation =  n_distinct(final_affiliation))
 
-# Number of distinct affiliation per taxa Class and per substrates
+#Number of distinct affiliation per taxa Class and per substrates
 edna_ppooled %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(substrate, Class) %>%
   summarise(distinct_affiliation = n_distinct(final_affiliation), .groups = 'drop') %>%
   tidyr::complete(substrate, Class, fill = list(distinct_affiliation = 0))
 
-# After filters number of distinct affiliation per taxa Class and per substrates
+#After filters number of distinct affiliation per taxa Class and per substrates
 edna_pfiltered %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(substrate, Class) %>%
   summarise(distinct_affiliation = n_distinct(final_affiliation), .groups = 'drop') %>%
   tidyr::complete(substrate, Class, fill = list(distinct_affiliation = 0))
+
+#Range of distinct affiliation within positive samples per primers
+edna_ppooled  %>%
+  filter(sum_positive_replicate > 0) %>%
+  group_by(sample, primer) %>%
+  summarise(distinct_affiliation =  n_distinct(final_affiliation),
+            .groups = "drop") %>%
+  group_by(primer) %>%
+  summarise(max_affiliation = max(distinct_affiliation),
+            min_affiliation = min (distinct_affiliation))
 
 # Example of OTU affiliation list
 edna_ppooled %>%
@@ -146,6 +156,37 @@ edna_ppooled %>%
   group_by(primer) %>%                        
   distinct(final_affiliation) %>%             
   ungroup() 
+
+#Number of samples without non-human vertebrate detection
+edna_ppooled %>%
+  filter(final_affiliation != "Homo_sapiens") %>%      
+  group_by(sample, primer) %>%
+  summarise(total_sample_reads = sum(sum_reads),
+            .groups = "drop") %>%
+  filter(total_sample_reads == 0) %>%                 
+  group_by(primer) %>%
+  summarise(nbr_sample = n())                         
+
+edna_gpooled %>%
+  filter(final_affiliation != "Homo_sapiens") %>%      
+  group_by(sample) %>%
+  summarise(total_sample_reads = sum(sum_reads),
+            .groups = "drop") %>%
+  filter(total_sample_reads == 0) %>% 
+  summarise(nbr_sample = n()) 
+
+#Number of sample with domestic vertebrate detected
+edna_gpooled %>%
+  filter(final_affiliation %in% domestic_affiliation_names) %>%
+  filter(sum_positive_replicate > 0) %>%
+  group_by(final_affiliation) %>%
+  summarise(positive_sample = n())
+
+#Total number of detection events for each Class
+edna_gfiltered %>%
+  filter(sum_positive_replicate > 0) %>%
+  group_by(Class) %>%
+  summarise(detection_event = n())
 
 
 ## Euleur Plots ----
@@ -330,6 +371,29 @@ rm(data_euler_sub)
 rm(data_euler_pri)
 
 
+## Richness distribution ----
+
+# For only positive samples
+edna_gpooled  %>%
+  filter(sum_positive_replicate > 0) %>%
+  group_by(sample, substrate) %>%
+  summarise(distinct_affiliation =  n_distinct(final_affiliation),
+            .groups = "drop") %>%
+  ggplot(aes(x = distinct_affiliation, y = substrate, fill = substrate)) +
+  ggridges::geom_density_ridges(alpha = 0.7, scale = 1) +         
+  scale_fill_manual(values = palette_substrate) +
+  labs(
+    title = "Distribution of distinct affiliations across substrates",
+    x = "Number of distinct affiliations",
+    y = "Substrate",
+    fill = "Substrate"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom"
+  )
+
+
 ## Histogram ----
 
 #Choose data to generate hist ▲
@@ -337,7 +401,7 @@ data_hist <- edna_pfiltered
 class_order <- c("Mammalia", "Aves", "Amphibia", "Lepidosauria")
 
 #Generate data used for histogram  
-data_hist <- data_hist %>%
+data_hist1 <- data_hist %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(primer, substrate, sample, final_affiliation, Class) %>%
   summarise(
@@ -353,7 +417,7 @@ data_hist <- data_hist %>%
   mutate(Class = factor(Class, levels = class_order))
 
 #Plot for primer 12S
-hist12s <- data_hist %>%
+hist12s <- data_hist1 %>%
   filter(primer == "12SV5") %>%
   mutate(final_affiliation = forcats::fct_reorder(final_affiliation, total_count, .desc = TRUE)) %>%
   ggplot(aes(x = final_affiliation, y = total_count, fill = substrate)) +
@@ -373,7 +437,7 @@ hist12s <- data_hist %>%
   ylim(0, 10)
 
 #Plot for primer 16S
-hist16s <- data_hist %>%
+hist16s <- data_hist1 %>%
   filter(primer == "16Smam") %>%
   mutate(final_affiliation = forcats::fct_reorder(final_affiliation, total_count, .desc = TRUE)) %>%
   ggplot(aes(x = final_affiliation, y = total_count, fill = substrate)) +
@@ -398,7 +462,43 @@ patchwork::wrap_plots(hist12s, hist16s, ncol = 1) +
   theme(legend.position = "bottom") &
   plot_annotation(title = "Histogram of positive samples by primer")
 
-rm(data_hist)
+rm(data_hist1)
+
+
+
+## Stacked Histogram  ----
+data_hist2 <- data_hist %>%
+  filter(sum_positive_replicate > 0) %>%
+  group_by(substrate, sample, final_affiliation, Class) %>%
+  summarise(
+    positive_sample = n(),
+    .groups = "drop"
+  ) %>%
+  group_by(substrate, final_affiliation, Class) %>%
+  summarise(
+    total_count = sum(positive_sample),
+    .groups = "drop"
+  ) %>%
+  arrange(Class, final_affiliation) %>%
+  mutate(Class = factor(Class, levels = class_order)) 
+
+data_hist_combined <- data_hist2 %>%
+  mutate(final_affiliation = forcats::fct_reorder(final_affiliation, total_count, .desc = TRUE))
+
+ggplot(data_hist_combined, aes(x = final_affiliation, y = total_count, fill = substrate)) +
+  geom_bar(stat = "identity", position = position_stack()) +
+  labs(
+    title = "Stacked Histogram of Positive Samples by Substrate",
+    x = "Final Affiliation",
+    y = "Total Count of Positive Samples"
+  ) +
+  facet_grid(cols = vars(Class), scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = palette_substrate) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  ) 
 
 
 ## Rarefaction curves ----
@@ -630,5 +730,22 @@ edna_pfiltered_repeatability %>%
 # presque on peut faire un modele 0 / 1 logistique sur ce truc 1 plus de 1 replicat, 0 : seul replicat snif
 # Le probleme c'est que pas cool de faire sur gfiltered parce que y'a parfois 6 replicas, donc faudrait 
 # faire marqueurs par marqueurs pour ce truc
+
+
+# WORK IN PROGRESSSSSS TELETRAVAIL VERSION ----
+temp <- edna_gfiltered %>%
+  mutate(within_replicated = if_else(pooled_percent_positive >= 0.5, 1, 0) ) 
+
+# a faire jsp dans quel script mais pas ici for sure
+temp <- temp %>%
+  filter(sum_reads > 0)
+
+# l'autre table + besoin ajouter relocate
+temp2 <- edna_pfiltered %>%
+  mutate(within_replicated = if_else(sum_positive_replicate > 1, 1, 0) ) 
+
+temp2 <- temp2 %>%
+  filter(sum_reads > 0)
+
 
 

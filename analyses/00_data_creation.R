@@ -8,12 +8,13 @@ library(stringr)
 ## Parameters ----
 
 #Filtering choices
-filter_onlyzoo <- FALSE
-filter_zoo <- TRUE
-filter_conta <- FALSE
-filter_human <- TRUE
-filter_domestic <- FALSE
-filter_affiliation_level <- TRUE
+filter_onlyzoo <- FALSE                    # Keeping only samples from the zoo
+filter_zoo <- TRUE                         # Removing samples from the zoo
+filter_conta <- TRUE                       # Removing contaminant taxa (Sardina)
+filter_human <- TRUE                       # Removing human sequences
+filter_affiliation_level <- TRUE           # Removing affiliation above genus or species level
+filter_domestic <- TRUE                    # Removing domestic taxa
+
 
 #Variable to identify possible domestic taxa
 domestic_affiliation_names <- c("Sus_scrofa",
@@ -25,9 +26,9 @@ domestic_affiliation_names <- c("Sus_scrofa",
                                 "Equus_caballus",
                                 "Meleagris_gallopavo",
                                 "Oryctolagus_cuniculus")
-
 #Phasianus_colchicus, Numida_meleagris and Alectoris_rufa can be bred by humans
 #but are not considered to be domestic animals here, as their presence here probably comes from free-ranging individuals.
+
 
 
 ## Import files ----
@@ -273,6 +274,15 @@ edna_ppooled <- edna_ppooled %>%
     TRUE ~ NA
   ))
 
+#Variable to identify affiliation repeated in more than half of replicates for each sample
+edna_gpooled <- edna_gpooled %>%
+  mutate(within_repeated_positive = if_else(pooled_percent_positive >= 0.5, 1, 0) ) %>%
+  relocate(within_repeated_positive, .after = sum_positive_replicate)
+
+edna_ppooled <- edna_ppooled %>%  
+  mutate(within_repeated_positive = if_else(sum_positive_replicate > 1, 1, 0)) %>%
+  relocate(within_repeated_positive, .after = sum_positive_replicate)
+
 ## Apply filters based on selected criteria ----
 edna_pfiltered <- edna_ppooled
 edna_gfiltered <- edna_gpooled
@@ -325,6 +335,21 @@ if (filter_affiliation_level) {
     filter(affiliation_level %in% c("species", "genus"))
 }
 
+
+#Delete rows with affiliation containing only negatives for filtered data
+edna_pfiltered <- edna_pfiltered %>%
+  filter(final_affiliation %in% 
+           (edna_pfiltered %>%
+              filter(sum_positive_replicate > 0) %>%
+              distinct(final_affiliation) %>%
+              pull(final_affiliation)))
+
+edna_gfiltered <- edna_gfiltered %>%
+  filter(final_affiliation %in% 
+           (edna_gfiltered %>%
+              filter(sum_positive_replicate > 0) %>%
+              distinct(final_affiliation) %>%
+              pull(final_affiliation)))
 
 # Writing data file ----
 edna_gpooled %>%

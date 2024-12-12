@@ -133,10 +133,10 @@ m_replic <- lme4::glmer(data = d_glm_replic,
                         control = lme4::glmerControl( optimizer = "bobyqa", optCtrl = list(maxfun=2e5) ) )
 
 
-## Considering both primers but without pooled replicates ----
-#Create data used in the glm
-d_glm_repeat <- edna_pfiltered_repeatability 
-
+### New model repeatability ----
+#Create data used in the glm (only positive here)
+d_glm_repeat <- edna_pfiltered %>%
+  mutate(sum_reads > 0)
 
 #Global model specification
 m_repeat <- lme4::glmer(data = d_glm_repeat,
