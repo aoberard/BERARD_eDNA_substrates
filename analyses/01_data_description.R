@@ -102,12 +102,36 @@ quality_variation %>%
 
 # Final taxonomic affiliations ----
 
-## Descriptive numbers ----
+## Descriptive informations ----
 
-#Percent of positive samples replicated by more than half of technical replicates
-edna_pfiltered %>%
+# Affiliations in zoo, out of zoo and unique to zoo
+affiliation_in_zoo <- edna_ppooled %>%
+  filter(in_zoo == TRUE) %>%
+  filter(sum_positive_replicate > 0) %>%
+  select(final_affiliation) %>%
+  pull() %>%
+  unique()
+
+affiliation_out_zoo <- edna_ppooled %>%
+  filter(in_zoo == FALSE) %>%
+  filter(sum_positive_replicate > 0) %>%
+  select(final_affiliation) %>%
+  pull() %>%
+  unique()
+
+setdiff(affiliation_in_zoo, affiliation_out_zoo)
+
+#Percent of positive samples replicated by more than half of technical replicates - per primer unfiltered data
+edna_ppooled %>%
   filter(sum_reads >0) %>%
-  group_by(primer, substrate) %>%
+  group_by(primer) %>%
+  summarise(percent_within_repeated = 100 *sum(within_repeated_positive) / n(),
+            effectif = n() )
+
+#Percent of positive samples replicated by more than half of technical replicates - per substrate filtered data
+edna_gfiltered %>%
+  filter(sum_reads >0) %>%
+  group_by(substrate) %>%
   summarise(percent_within_repeated = 100 *sum(within_repeated_positive) / n(),
             effectif = n() )
 
@@ -132,7 +156,7 @@ edna_ppooled %>%
 #After filters total number of distinct affiliation  per substrate - primers
 edna_pfiltered %>%
   filter(sum_positive_replicate > 0) %>%
-  group_by(substrate, primer) %>%
+  group_by(primer, substrate) %>%
   summarise(distinct_affiliation =  n_distinct(final_affiliation))
 
 #Number of distinct affiliation per taxa Class and per substrates

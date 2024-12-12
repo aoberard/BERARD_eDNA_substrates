@@ -30,7 +30,6 @@ domestic_affiliation_names <- c("Sus_scrofa",
 #but are not considered to be domestic animals here, as their presence here probably comes from free-ranging individuals.
 
 
-
 ## Import files ----
 
 #Manually corrected abundance files
