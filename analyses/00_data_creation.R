@@ -155,7 +155,8 @@ edna_ppooled <- all_edna %>%
   summarize(across(c(Class, Order, Family, Genus, Species), first),
             sum_positive_replicate = sum(positive_replicate),
             pooled_number = n(),
-            sum_reads = sum(reads)) %>%
+            sum_reads = sum(reads),
+            .groups = "drop") %>%
   ungroup()
 
 

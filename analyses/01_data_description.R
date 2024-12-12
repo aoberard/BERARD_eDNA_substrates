@@ -14,6 +14,9 @@ library(patchwork)
 palette_substrate <- c("spiderweb" = "#36c296AA", "leaf" = "#fa6f45AA", "soil" = "#fadc21AA")
 palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smam" = "#A2D1D1AA")
 
+# Ordering elements
+class_order <- c("Aves", "Mammalia", "Amphibia", "Lepidosauria")
+
 
 # Data quality ----
 
@@ -405,11 +408,11 @@ edna_gpooled  %>%
 ## Histogram ----
 
 #Choose data to generate hist ▲
-data_hist <- edna_pfiltered
-class_order <- c("Mammalia", "Aves", "Amphibia", "Lepidosauria")
+data_hist1 <- edna_pfiltered
+data_hist2 <- edna_gfiltered
 
 #Generate data used for histogram  
-data_hist1 <- data_hist %>%
+data_hist1 <- data_hist1 %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(primer, substrate, sample, final_affiliation, Class) %>%
   summarise(
@@ -441,8 +444,7 @@ hist12s <- data_hist1 %>%
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "bottom"
-  ) +
-  ylim(0, 10)
+  )
 
 #Plot for primer 16S
 hist16s <- data_hist1 %>%
@@ -461,8 +463,7 @@ hist16s <- data_hist1 %>%
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "bottom"
-  ) +
-  ylim(0, 10)
+  ) 
 
 #Combined histogram
 patchwork::wrap_plots(hist12s, hist16s, ncol = 1) +
@@ -473,9 +474,8 @@ patchwork::wrap_plots(hist12s, hist16s, ncol = 1) +
 rm(data_hist1)
 
 
-
 ## Stacked Histogram  ----
-data_hist2 <- data_hist %>%
+data_hist2 <- data_hist2 %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(substrate, sample, final_affiliation, Class) %>%
   summarise(
