@@ -128,14 +128,14 @@ edna_ppooled %>%
   summarise(percent_within_repeated = 100 *sum(within_repeated_positive) / n(),
             effectif = n() )
 
-#Percent of positive samples replicated by more than half of technical replicates - per substrate filtered data
+#Percent of positive samples replicated by more than half of technical replicates - per substrate filtered and primer pooled data
 edna_gfiltered %>%
   filter(sum_reads >0) %>%
   group_by(substrate) %>%
   summarise(percent_within_repeated = 100 *sum(within_repeated_positive) / n(),
             effectif = n() )
 
-#Total number of distinct affiliation  per primers
+#Total number of distinct affiliation per primers
 edna_ppooled %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(primer) %>%
@@ -159,12 +159,11 @@ edna_pfiltered %>%
   group_by(primer, substrate) %>%
   summarise(distinct_affiliation =  n_distinct(final_affiliation))
 
-#Number of distinct affiliation per taxa Class and per substrates
-edna_ppooled %>%
+#After filters and primer pooling total number of distinct affiliation  per substrate
+edna_gfiltered %>%
   filter(sum_positive_replicate > 0) %>%
-  group_by(substrate, Class) %>%
-  summarise(distinct_affiliation = n_distinct(final_affiliation), .groups = 'drop') %>%
-  tidyr::complete(substrate, Class, fill = list(distinct_affiliation = 0))
+  group_by(substrate) %>%
+  summarise(distinct_affiliation =  n_distinct(final_affiliation))
 
 #After filters number of distinct affiliation per taxa Class and per substrates
 edna_pfiltered %>%
@@ -240,44 +239,42 @@ affiliations_by_substrate <- data_euler_sub %>%
   ) %>%
   ungroup()
 
-#obtain affiliation that are only found in each considered substrate
-unique_to_each_substrate <- map_df(affiliations_by_substrate$substrate, function(sub) {
-  other_affiliations <- affiliations_by_substrate %>%
-    filter(substrate != sub) %>%
-    pull(unique_affiliations) %>%
-    unlist()
-  
-  only_in_sub <- setdiff(unlist(affiliations_by_substrate %>% filter(substrate == sub) %>% pull(unique_affiliations)), other_affiliations)
-  
-  tibble(
-    substrates = sub,
-    intersect_affiliations = list(only_in_sub),
-    count_intersect_affiliations = length(only_in_sub)
-  )
-})
+#Create a data frame to store results of combinations
+intersections <- tibble(
+  substrates = character(),
+  intersect_affiliations = list(),
+  count_intersect_affiliations = integer()
+)
 
-#List every possible combination of substrates
-substrate_combinations <- lapply(2:nrow(affiliations_by_substrate), function(x) {
-  combn(affiliations_by_substrate$substrate, x, simplify = FALSE)
-}) %>% unlist(recursive = FALSE)
+#Loop through combinations in decreasing order of complexity
+substrate_combinations <- c(
+  list(c("leaf", "soil", "spiderweb")),  
+  combn(affiliations_by_substrate$substrate, 2, simplify = FALSE),  #Pairs
+  combn(affiliations_by_substrate$substrate, 1, simplify = FALSE)  #Singles
+)
 
-#Keep only intersect affiliations between combination
-intersections <- map_df(substrate_combinations, function(subset) {
+for (subset in substrate_combinations) {
+  #Get intersecting affiliations for each combination
   subset_data <- affiliations_by_substrate %>%
     filter(substrate %in% subset) %>%
     pull(unique_affiliations)
   
   intersect_affiliations <- reduce(subset_data, intersect)
   
-  tibble(
+  #Exclude affiliations already assigned to higher-order combinations
+  already_assigned <- unlist(intersections$intersect_affiliations)
+  intersect_affiliations <- setdiff(intersect_affiliations, already_assigned)
+  
+  #Keep the results
+  intersections <- bind_rows(intersections, tibble(
     substrates = paste(subset, collapse = " & "),
     intersect_affiliations = list(intersect_affiliations),
     count_intersect_affiliations = length(unlist(intersect_affiliations))
-  )
-})
+  ))
+}
 
-#Combine results of combination with results solely in one substrate
-substrates_area <- bind_rows(unique_to_each_substrate, intersections)
+# Combine results of single substrates, pairs, and higher-order intersections
+substrates_area <- intersections
 print(substrates_area)
 
 #Area per known substrates :

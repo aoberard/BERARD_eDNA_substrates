@@ -1,12 +1,3 @@
-# A FAIRE APRES DISCU MAX ET NATH ------
- 
-# modeles 0/1 - proba de detaction
-# faire sur data pooled, peut-être prendre en compte primer en tant que facteur aleatoire
-# dans ce cas, pas forcement besoin de prendre données poolés au niveau de l'echantillon, si ?
-
-# reflechir a si dans ce cas c'est genant le fait d'avoir pool (notamment car certaines affiliations existe pas pour certains primer, pas meme nombre de ligne au total (pas meme nombre de 0 - 1)), mais peut-être si met en facteur aleatoire c'est pg ?
-# le fait est que pool réduit nombre total de taxa (car pool plus filtr ensuite qui rabote le pool)
- 
 # Script set-up ----
  
 ## Library and functions ----
