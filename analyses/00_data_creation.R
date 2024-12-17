@@ -10,10 +10,10 @@ library(stringr)
 #Filtering choices
 filter_onlyzoo <- FALSE                    # Keeping only samples from the zoo
 filter_zoo <- TRUE                         # Removing samples from the zoo
-filter_conta <- TRUE                       # Removing contaminant taxa (Sardina)
+filter_conta <- FALSE                       # Removing contaminant taxa (Sardina)
 filter_human <- TRUE                       # Removing human sequences
-filter_affiliation_level <- TRUE           # Removing affiliation above genus or species level
-filter_domestic <- TRUE                    # Removing domestic taxa
+filter_affiliation_level <- FALSE           # Removing affiliation above genus or species level
+filter_domestic <- FALSE                    # Removing domestic taxa
 
 
 #Variable to identify possible domestic taxa
@@ -136,7 +136,6 @@ all_edna %>%
   filter(distinct_classes > 1 | distinct_orders > 1 | 
            distinct_families > 1 | distinct_genera > 1 | 
            distinct_species > 1)
-
 
 
 # Pooling replicates per sample ----

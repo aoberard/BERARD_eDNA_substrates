@@ -62,7 +62,7 @@ ggplot(em_summary_detect, aes(x = prob, y = reorder(substrate, prob), color = su
   facet_wrap(~ Class, nrow = 2) + 
   theme_minimal(base_size = 14) +
   labs(
-    x = "Estimated probability",
+    x = "Estimated detection probability",
     y = "Substrate",
     color = "Substrate"
   ) +
@@ -122,7 +122,7 @@ ggplot(em_summary_repeat, aes(x = prob, y = reorder(substrate, prob), color = su
   scale_color_manual(values = palette_substrate) + 
   theme_minimal(base_size = 14) +
   labs(
-    x = "Estimated probability",
+    x = "Estimated detection probability",
     y = "Substrate",
     color = "Substrate"
   ) +

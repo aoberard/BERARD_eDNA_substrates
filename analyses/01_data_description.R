@@ -38,9 +38,7 @@ threshold_values <- seq(0,
                           max(),
                         by = 500)
 
-#For each threshold_values, calculate replicate and sample counts under it
-quality_variation <- map_df(threshold_values, function(threshold) {
-  data_quality_check %>%
+quality_variation <- data_quality_check %>%
     mutate(
       substrate = case_when(
         stringr::str_detect(PCRreplicate, "LEAF") ~ "leaf",
@@ -55,21 +53,51 @@ quality_variation <- map_df(threshold_values, function(threshold) {
       sample = first(sample),
       .groups = "drop"
     ) %>%
-    ungroup() %>%
+    ungroup() 
+
+#For each threshold_values, calculate replicate and sample counts under it
+quality_variation_replicate <- data.frame()
+quality_variation_sample <- data.frame()
+
+for (threshold in threshold_values){
+  replicate_data <- quality_variation %>%
     filter(total_reads < threshold) %>%
     group_by(primer, substrate) %>%
     summarise(
-      replicate_count = n(),             
-      sample_count = n_distinct(sample),
+      replicate_count = n(),
       .groups = "drop"
     ) %>%
-    ungroup() %>%
-    tidyr::complete(primer, substrate, fill = list(replicate_count = 0, sample_count = 0)) %>%
-    mutate(reads_quality_threshold = threshold) 
-})
+    tidyr::complete(primer, substrate, fill = list(replicate_count = 0)) %>%
+    mutate(reads_quality_threshold = threshold)
+  
+  quality_variation_replicate <- bind_rows(quality_variation_replicate, replicate_data)
+  
+  sample_data <- quality_variation %>%
+    group_by(sample, primer, substrate) %>%
+    summarise(
+      total_reads = sum(total_reads),
+      .groups = "drop"
+    ) %>%
+    filter(total_reads < threshold) %>% 
+    group_by(primer, substrate) %>%
+    summarise(
+      sample_count = n(),
+      .groups = "drop"
+    ) %>%
+    tidyr::complete(primer, substrate, fill = list(sample_count = 0)) %>%
+    mutate(reads_quality_threshold = threshold)
+  
+  quality_variation_sample <- bind_rows(quality_variation_sample, sample_data)
+  
+}
+
+quality_variation_final <- left_join(quality_variation_replicate, quality_variation_sample)
+quality_variation_final <- quality_variation_final %>%
+  mutate(sample_count = if_else(is.na(sample_count), 0, sample_count))
+
 
 #Plot replicate count against reads threshold
-ggplot(quality_variation, aes(x = reads_quality_threshold, y = replicate_count, color = substrate)) +
+ggplot(quality_variation_final, aes(x = reads_quality_threshold, y = replicate_count, color = substrate)) +
   geom_line(linewidth = 1.1) +  
   facet_wrap(~ primer) +
   scale_color_manual(values = palette_substrate) + 
@@ -82,7 +110,7 @@ ggplot(quality_variation, aes(x = reads_quality_threshold, y = replicate_count, 
   theme(legend.position = "bottom")
 
 #Plot sample count against reads threshold
-ggplot(quality_variation, aes(x = reads_quality_threshold, y = sample_count, color = substrate)) +
+ggplot(quality_variation_final, aes(x = reads_quality_threshold, y = sample_count, color = substrate)) +
   geom_line(linewidth = 1.1) +
   facet_wrap(~ primer) +
   scale_color_manual(values = palette_substrate) +  
@@ -96,7 +124,7 @@ ggplot(quality_variation, aes(x = reads_quality_threshold, y = sample_count, col
 
 #Number of replicates and samples per primer and substrate under a chosen quality thresholds 
 chosen_quality_threshold <- 1000
-quality_variation %>%
+quality_variation_final %>%
   filter(reads_quality_threshold == chosen_quality_threshold)
 
 
@@ -141,7 +169,6 @@ edna_ppooled %>%
   group_by(primer) %>%
   summarise(distinct_affiliation =  n_distinct(final_affiliation))
 
-#After chosen filters total number of distinct affiliation  per primers
 edna_pfiltered %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(primer) %>%
@@ -220,6 +247,17 @@ edna_gfiltered %>%
   group_by(Class) %>%
   summarise(detection_event = n())
 
+#Total number of detection events for each primer, substrate
+edna_pfiltered %>%
+  filter(sum_positive_replicate > 0) %>%
+  group_by(primer, substrate) %>%
+  summarise(detection_event = n())
+
+#Number of sample per primer substrate after filtering 
+edna_pfiltered %>%
+  filter(sum_positive_replicate > 0) %>%
+  group_by(primer, substrate) %>%
+  summarise(positive_sample = n_distinct(sample))
 
 ## Euleur Plots ----
 
