@@ -41,14 +41,33 @@ DHARMa::simulateResiduals(m_detect_best) %>%
 
 #Best model look
 summary(m_detect_best)
-
-em <- emmeans::emmeans(m_detect_best, ~ substrate | Class)
-plot(em, comparisons = TRUE)
-emmeans::contrast(em, "pairwise", adjust = "Tukey")
-
+gtsummary::tbl_regression(m_detect_best)
 ggstats::ggcoef_model(m_detect_best)
 
-gtsummary::tbl_regression(m_detect_best)
+#LRT test
+drop1(m_detect_best,.~.,test="Chisq")
+
+#Post-hoc tests
+em_detect <- emmeans::emmeans(m_detect_best, ~ substrate | Class, type = "response")
+plot(em_detect, comparisons = TRUE)
+emmeans::contrast(em_detect, "pairwise", adjust = "Tukey")
+
+#Plot emmeans prob results
+em_summary_detect <- as.data.frame(em_detect)
+
+ggplot(em_summary_detect, aes(x = prob, y = substrate, color = substrate)) +
+  geom_point(size = 4) +
+  geom_errorbar(aes(xmin = asymp.LCL, xmax = asymp.UCL), width = 0.2) +  # Add confidence intervals
+  scale_color_manual(values = palette_substrate) +  
+  facet_wrap(~ Class) +
+  theme_minimal() + 
+  labs(
+    color = "Substrate"
+  ) +
+  theme(
+    legend.position = "top",
+    text = element_text(size = 12)
+  )
 
 
 ## Model for within sample repeatability ----
@@ -80,15 +99,32 @@ DHARMa::simulateResiduals(m_repeat_best) %>%
 
 #Best model look
 summary(m_repeat_best)
-
-em <- emmeans::emmeans(m_repeat_best, ~ substrate )
-plot(em, comparisons = TRUE)
-emmeans::contrast(em, "pairwise", adjust = "Tukey")
-
+gtsummary::tbl_regression(m_repeat_best)
 ggstats::ggcoef_model(m_repeat_best)
 
-gtsummary::tbl_regression(m_repeat_best)
+#LRT test
+drop1(m_repeat_best,.~.,test="Chisq")
 
+#Post-hoc tests
+em_repeat <- emmeans::emmeans(m_repeat_best, ~ substrate , type = "response")
+plot(em_repeat, comparisons = TRUE)
+emmeans::contrast(em_repeat, "pairwise", adjust = "Tukey")
+
+#Plot emmeans prob results
+em_summary_repeat <- as.data.frame(em_repeat)
+
+ggplot(em_summary_repeat, aes(x = prob, y = substrate, color = substrate)) +
+  geom_point(size = 4) +
+  geom_errorbar(aes(xmin = asymp.LCL, xmax = asymp.UCL), width = 0.2) +  # Add confidence intervals
+  scale_color_manual(values = palette_substrate) +  
+  theme_minimal() + 
+  labs(
+    color = "Substrate"
+  ) +
+  theme(
+    legend.position = "top",
+    text = element_text(size = 12)
+  )
 
 
 
