@@ -55,19 +55,22 @@ emmeans::contrast(em_detect, "pairwise", adjust = "Tukey")
 #Plot emmeans prob results
 em_summary_detect <- as.data.frame(em_detect)
 
-ggplot(em_summary_detect, aes(x = prob, y = substrate, color = substrate)) +
+ggplot(em_summary_detect, aes(x = prob, y = reorder(substrate, prob), color = substrate)) +
   geom_point(size = 4) +
-  geom_errorbar(aes(xmin = asymp.LCL, xmax = asymp.UCL), width = 0.2) +  # Add confidence intervals
-  scale_color_manual(values = palette_substrate) +  
-  facet_wrap(~ Class) +
-  theme_minimal() + 
+  geom_segment(aes(x = asymp.LCL, xend = asymp.UCL, y = substrate, yend = substrate), linewidth = 1.3) +
+  scale_color_manual(values = palette_substrate) + 
+  facet_wrap(~ Class, nrow = 2) + 
+  theme_minimal(base_size = 14) +
   labs(
+    x = "Estimated probability",
+    y = "Substrate",
     color = "Substrate"
   ) +
   theme(
-    legend.position = "top",
-    text = element_text(size = 12)
-  )
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank()
+  ) 
 
 
 ## Model for within sample repeatability ----
@@ -113,20 +116,21 @@ emmeans::contrast(em_repeat, "pairwise", adjust = "Tukey")
 #Plot emmeans prob results
 em_summary_repeat <- as.data.frame(em_repeat)
 
-ggplot(em_summary_repeat, aes(x = prob, y = substrate, color = substrate)) +
+ggplot(em_summary_repeat, aes(x = prob, y = reorder(substrate, prob), color = substrate)) +
   geom_point(size = 4) +
-  geom_errorbar(aes(xmin = asymp.LCL, xmax = asymp.UCL), width = 0.2) +  # Add confidence intervals
-  scale_color_manual(values = palette_substrate) +  
-  theme_minimal() + 
+  geom_segment(aes(x = asymp.LCL, xend = asymp.UCL, y = substrate, yend = substrate), linewidth = 1.3) +
+  scale_color_manual(values = palette_substrate) + 
+  theme_minimal(base_size = 14) +
   labs(
+    x = "Estimated probability",
+    y = "Substrate",
     color = "Substrate"
   ) +
   theme(
-    legend.position = "top",
-    text = element_text(size = 12)
-  )
-
-
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank()
+  ) 
 
 
 
