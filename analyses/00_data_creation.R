@@ -47,10 +47,13 @@ odk <- odk %>% select(`info-localite`, id_tube_toile, `ecouvillon_feuille-id_tub
 rm(odk_w)
 
 #line_data
-
+line <- readxl::read_excel(here::here("data/raw-data/20241203_lines_variables.xlsx"))
+  
 #join for check
+odk$`info-localite` <- as.numeric(odk$`info-localite`)
+odk_line <- left_join(odk, line, by = c("info-localite" = "num"))
 
-
+write.csv(odk_line, file = here::here("odk_line.csv"))
 
 # Global data creation ----
 
