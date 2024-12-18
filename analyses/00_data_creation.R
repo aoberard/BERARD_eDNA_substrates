@@ -46,6 +46,11 @@ odk <- left_join(odk, odk_w, by = c("KEY" = "PARENT_KEY"))
 odk <- odk %>% select(`info-localite`, id_tube_toile, `ecouvillon_feuille-id_tube_feuille`, `sol_ligne-id_tube_sol_ligne`)
 rm(odk_w)
 
+#line_data
+
+#join for check
+
+
 
 # Global data creation ----
 

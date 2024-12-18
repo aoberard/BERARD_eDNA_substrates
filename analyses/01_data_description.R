@@ -574,9 +574,7 @@ rm(data_hist2)
 
 #Choose data to use ▲
 data_raref_p <- edna_pfiltered
-
 data_raref_g <- edna_gfiltered
-
 
 ### For each primers ----
 #Function to generate inext data
