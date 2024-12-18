@@ -44,9 +44,6 @@ summary(m_detect_best)
 gtsummary::tbl_regression(m_detect_best)
 ggstats::ggcoef_model(m_detect_best)
 
-#LRT test
-drop1(m_detect_best,.~.,test="Chisq")
-
 #Post-hoc tests
 em_detect <- emmeans::emmeans(m_detect_best, ~ substrate | Class, type = "response")
 plot(em_detect, comparisons = TRUE)
@@ -104,9 +101,6 @@ DHARMa::simulateResiduals(m_repeat_best) %>%
 summary(m_repeat_best)
 gtsummary::tbl_regression(m_repeat_best)
 ggstats::ggcoef_model(m_repeat_best)
-
-#LRT test
-drop1(m_repeat_best,.~.,test="Chisq")
 
 #Post-hoc tests
 em_repeat <- emmeans::emmeans(m_repeat_best, ~ substrate , type = "response")
