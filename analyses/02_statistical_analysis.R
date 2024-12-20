@@ -43,6 +43,8 @@ DHARMa::simulateResiduals(m_detect_best) %>%
 summary(m_detect_best)
 gtsummary::tbl_regression(m_detect_best)
 ggstats::ggcoef_model(m_detect_best)
+MuMIn::r.squaredGLMM(m_detect_best)
+
 
 #Post-hoc tests
 em_detect <- emmeans::emmeans(m_detect_best, ~ substrate | Class, type = "response")
@@ -101,6 +103,7 @@ DHARMa::simulateResiduals(m_repeat_best) %>%
 summary(m_repeat_best)
 gtsummary::tbl_regression(m_repeat_best)
 ggstats::ggcoef_model(m_repeat_best)
+MuMIn::r.squaredGLMM(m_repeat_best)
 
 #Post-hoc tests
 em_repeat <- emmeans::emmeans(m_repeat_best, ~ substrate , type = "response")
@@ -116,7 +119,7 @@ ggplot(em_summary_repeat, aes(x = prob, y = reorder(substrate, prob), color = su
   scale_color_manual(values = palette_substrate) + 
   theme_minimal(base_size = 14) +
   labs(
-    x = "Estimated detection probability",
+    x = "Estimated within-sample repeatability probability",
     y = "Substrate",
     color = "Substrate"
   ) +

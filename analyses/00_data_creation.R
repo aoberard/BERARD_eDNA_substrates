@@ -362,4 +362,3 @@ edna_pfiltered %>%
 
 edna_gfiltered %>%
   write.csv(file = here::here("data","derived-data","edna_gfiltered.csv"))
-
