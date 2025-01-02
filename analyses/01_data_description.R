@@ -18,7 +18,7 @@ palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smam" = "#A2D1D1AA")
 class_order <- c("Aves", "Mammalia", "Amphibia", "Lepidosauria")
 
 
-# Data quality ----
+# Data quality exploration ----
 
 ## Considering reads number ----
 #We are seeking for the number of replicates and samples per primer and substrate under possible quality thresholds
@@ -126,6 +126,123 @@ ggplot(quality_variation_final, aes(x = reads_quality_threshold, y = sample_coun
 chosen_quality_threshold <- 1000
 quality_variation_final %>%
   filter(reads_quality_threshold == chosen_quality_threshold)
+
+
+## Considering repeatability ----
+
+### Raw repeatability ----
+
+#For data by primers (edna_pfiltered or edna_ppooled), we plot the number of positive replicates for each substrates and affiliation level 
+edna_pfiltered %>%
+  group_by(affiliation_level, primer, substrate, sum_positive_replicate) %>%
+  summarize(count = n(),
+            .groups = 'drop') %>%
+  filter(sum_positive_replicate > 0) %>%
+  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
+  tidyr::complete(affiliation_level, primer, substrate, sum_positive_replicate, fill = list(count = 0)) %>%
+  ggplot(aes(x = sum_positive_replicate, y = count, fill = substrate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(affiliation_level ~ primer) +
+  scale_fill_manual(values = palette_substrate) +
+  labs(
+    title = "Distribution of positive Replicates by affiliation, primer, and substrate",
+    x = "Number of positive replicates",
+    y = "Count"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom") 
+
+#For data with pooled primers (edna_gfiltered or edna_gpooled), we plot the percent of positives replicates
+#Because there are not an equal number of replicates for each affiliation, due to shared and unshared affiliation between primers
+edna_gfiltered %>%
+  group_by(affiliation_level, substrate, pooled_percent_positive) %>%
+  summarize(count = n(),
+            .groups = 'drop') %>%
+  filter(pooled_percent_positive > 0) %>%
+  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
+  tidyr::complete(affiliation_level, substrate, pooled_percent_positive, fill = list(count = 0)) %>%
+  ggplot(aes(x = pooled_percent_positive, y = count, fill = substrate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(rows = vars(affiliation_level)) +
+  scale_fill_manual(values = palette_substrate) +
+  labs(
+    title = "Distribution of positive replicates by affiliation and substrate - with pooled primers",
+    x = "Percentage of Positive Replicates",
+    y = "Count"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom") 
+
+
+### Normalized ----
+
+# For each primers
+edna_pfiltered_normalized <- edna_pfiltered %>%
+  group_by(affiliation_level, primer, substrate, sum_positive_replicate) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  filter(sum_positive_replicate > 0) %>%
+  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
+  tidyr::complete(affiliation_level, primer, substrate, sum_positive_replicate, fill = list(count = 0)) 
+
+#Normalize the count by the total per substrate
+edna_pfiltered_normalized <- edna_pfiltered_normalized %>%
+  group_by(substrate, primer) %>%
+  mutate(
+    total_count_substrate = sum(count),  
+    normalized_count = count / total_count_substrate  
+  ) %>%
+  ungroup()
+
+#Plot the normalized count
+edna_pfiltered_normalized %>%
+  ggplot(aes(x = sum_positive_replicate, y = normalized_count, fill = substrate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(affiliation_level ~ primer) +
+  scale_fill_manual(values = palette_substrate) +
+  labs(
+    title = "Distribution of positive replicates by affiliation, primer, and substrate - with pooled primers",
+    x = "Number of positive replicates",
+    y = "Count"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  ylim(0,1)
+
+
+#For pooled primers
+
+#Total count per substrate
+edna_gfiltered_normalized <- edna_gfiltered %>%
+  group_by(affiliation_level, substrate, pooled_percent_positive) %>%
+  summarize(count = n(), 
+            .groups = 'drop') %>%
+  filter(pooled_percent_positive > 0) %>%
+  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
+  tidyr::complete(affiliation_level, substrate, pooled_percent_positive, fill = list(count = 0))
+
+#Normalize the count by the total per substrate
+edna_gfiltered_normalized <- edna_gfiltered_normalized %>%
+  group_by(substrate) %>%
+  mutate(
+    total_count_substrate = sum(count),  
+    normalized_count = count / total_count_substrate  
+  ) %>%
+  ungroup()
+
+#Plot the normalized count
+edna_gfiltered_normalized %>%
+  ggplot(aes(x = pooled_percent_positive, y = normalized_count, fill = substrate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(rows = vars(affiliation_level)) +
+  scale_fill_manual(values = palette_substrate) +
+  labs(
+    title = "Normalized distribution of positive replicates by affiliation and substrate",
+    x = "Percentage of Positive Replicates",
+    y = "Normalized Count"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  ylim(0,1)
 
 
 # Final taxonomic affiliations ----
@@ -258,6 +375,18 @@ edna_pfiltered %>%
   filter(sum_positive_replicate > 0) %>%
   group_by(primer, substrate) %>%
   summarise(positive_sample = n_distinct(sample))
+
+# Means of taxa per substrates
+edna_gfiltered %>%
+  mutate(positive = if_else(sum_reads >0 , 1, sum_reads)) %>%
+  group_by(sample, substrate) %>%
+  summarise(identified_taxa = sum(positive),
+            .groups = "drop") %>%
+  ungroup() %>%
+  group_by(substrate) %>%
+  summarise(mean = sum(identified_taxa) / n() ,
+            .groups = "drop")
+
 
 ## Euleur Plots ----
 
@@ -659,124 +788,4 @@ rm(curv_gpooled)
 
 rm(data_raref_p)
 rm(data_raref_g)
-
-
-# Repeatability ----
-
-## Raw repeatability ----
-
-#For data by primers (edna_pfiltered or edna_ppooled), we plot the number of positive replicates for each substrates and affiliation level 
-edna_pfiltered %>%
-  group_by(affiliation_level, primer, substrate, sum_positive_replicate) %>%
-  summarize(count = n(),
-            .groups = 'drop') %>%
-  filter(sum_positive_replicate > 0) %>%
-  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
-  tidyr::complete(affiliation_level, primer, substrate, sum_positive_replicate, fill = list(count = 0)) %>%
-  ggplot(aes(x = sum_positive_replicate, y = count, fill = substrate)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(affiliation_level ~ primer) +
-  scale_fill_manual(values = palette_substrate) +
-  labs(
-    title = "Distribution of positive Replicates by affiliation, primer, and substrate",
-    x = "Number of positive replicates",
-    y = "Count"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "bottom") 
-
-#For data with pooled primers (edna_gfiltered or edna_gpooled), we plot the percent of positives replicates
-#Because there are not an equal number of replicates for each affiliation, due to shared and unshared affiliation between primers
-edna_gfiltered %>%
-  group_by(affiliation_level, substrate, pooled_percent_positive) %>%
-  summarize(count = n(),
-            .groups = 'drop') %>%
-  filter(pooled_percent_positive > 0) %>%
-  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
-  tidyr::complete(affiliation_level, substrate, pooled_percent_positive, fill = list(count = 0)) %>%
-  ggplot(aes(x = pooled_percent_positive, y = count, fill = substrate)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(rows = vars(affiliation_level)) +
-  scale_fill_manual(values = palette_substrate) +
-  labs(
-    title = "Distribution of positive replicates by affiliation and substrate - with pooled primers",
-    x = "Percentage of Positive Replicates",
-    y = "Count"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "bottom") 
-
-
-## Normalized ----
-
-# For each primers
-edna_pfiltered_normalized <- edna_pfiltered %>%
-  group_by(affiliation_level, primer, substrate, sum_positive_replicate) %>%
-  summarize(count = n(), .groups = 'drop') %>%
-  filter(sum_positive_replicate > 0) %>%
-  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
-  tidyr::complete(affiliation_level, primer, substrate, sum_positive_replicate, fill = list(count = 0)) 
-  
-#Normalize the count by the total per substrate
-edna_pfiltered_normalized <- edna_pfiltered_normalized %>%
-  group_by(substrate, primer) %>%
-  mutate(
-    total_count_substrate = sum(count),  
-    normalized_count = count / total_count_substrate  
-  ) %>%
-  ungroup()
-
-#Plot the normalized count
-edna_pfiltered_normalized %>%
-  ggplot(aes(x = sum_positive_replicate, y = normalized_count, fill = substrate)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(affiliation_level ~ primer) +
-  scale_fill_manual(values = palette_substrate) +
-  labs(
-    title = "Distribution of positive replicates by affiliation, primer, and substrate - with pooled primers",
-    x = "Number of positive replicates",
-    y = "Count"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  ylim(0,1)
-
-
-#For pooled primers
-
-#Total count per substrate
-edna_gfiltered_normalized <- edna_gfiltered %>%
-  group_by(affiliation_level, substrate, pooled_percent_positive) %>%
-  summarize(count = n(), 
-            .groups = 'drop') %>%
-  filter(pooled_percent_positive > 0) %>%
-  mutate(substrate = factor(substrate, levels = c("soil", "leaf", "spiderweb"))) %>%
-  tidyr::complete(affiliation_level, substrate, pooled_percent_positive, fill = list(count = 0))
-
-#Normalize the count by the total per substrate
-edna_gfiltered_normalized <- edna_gfiltered_normalized %>%
-  group_by(substrate) %>%
-  mutate(
-    total_count_substrate = sum(count),  
-    normalized_count = count / total_count_substrate  
-  ) %>%
-  ungroup()
-
-#Plot the normalized count
-edna_gfiltered_normalized %>%
-  ggplot(aes(x = pooled_percent_positive, y = normalized_count, fill = substrate)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(rows = vars(affiliation_level)) +
-  scale_fill_manual(values = palette_substrate) +
-  labs(
-    title = "Normalized distribution of positive replicates by affiliation and substrate",
-    x = "Percentage of Positive Replicates",
-    y = "Normalized Count"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  ylim(0,1)
-
-
-
 
