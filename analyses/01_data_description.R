@@ -11,7 +11,12 @@ library(patchwork)
 ## Graphical parameters ----
 
 #Define colors for each substrate
-palette_substrate <- c("spiderweb" = "#36c296AA", "leaf" = "#fa6f45AA", "soil" = "#fadc21AA")
+palette_substrate <- c(
+  "spiderweb" = "#77AADDCC",  
+  "leaf" = "#BBCC33CC",      
+  "soil" = "#EE8866CC"       
+)
+
 palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smam" = "#A2D1D1AA")
 
 # Ordering elements
@@ -781,7 +786,7 @@ curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1) +
   scale_fill_manual(values = palette_substrate) +
   ggtitle("Rarefaction Curve - Pooled 12Sv5 - 16Smam") +
   theme_minimal() +
-  ylim(c(0,60))
+  ylim(c(0, 60))
 
 curv_gpooled
 rm(curv_gpooled)
