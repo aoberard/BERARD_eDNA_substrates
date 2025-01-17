@@ -17,6 +17,12 @@ palette_substrate <- c(
   "soil" = "#EE8866CC"       
 )
 
+palette_substrate <- c(
+  "spiderweb" = "#BBBBBBCC",  
+  "leaf" = "#99B56B99",      
+  "soil" = "#DB9D85CC"       
+)
+
 palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smam" = "#A2D1D1AA")
 
 # Ordering elements
@@ -470,6 +476,7 @@ euler_sub <- eulerr::euler(c(
 ))
 
 rm(sp, lf, so, splf, lfso, spso, splfso)
+
 
 #Draw euler plot
 plot(euler_sub,
