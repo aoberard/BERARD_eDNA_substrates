@@ -10,13 +10,6 @@ library(patchwork)
 
 ## Graphical parameters ----
 
-#Define colors for each substrate
-palette_substrate <- c(
-  "spiderweb" = "#77AADDCC",  
-  "leaf" = "#BBCC33CC",      
-  "soil" = "#EE8866CC"       
-)
-
 palette_substrate <- c(
   "spiderweb" = "#BBBBBBCC",  
   "leaf" = "#99B56B99",      
@@ -795,7 +788,26 @@ curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1) +
   theme_minimal() +
   ylim(c(0, 60))
 
+curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1) +
+  scale_color_manual(values = palette_substrate) +
+  scale_fill_manual(values = palette_substrate) +
+  ggtitle("Rarefaction Curve - Pooled 12Sv5 - 16Smam") +
+  ylim(c(0, 60)) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text = element_text(color = "gray20", size = 12),          
+    axis.title = element_text(color = "gray20", size = 14), 
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.text = element_text(size = 12)
+  )
+
+
 curv_gpooled
+
+ggsave(filename = here::here("figures","rarefaction_curve.pdf"), plot = curv_gpooled, 
+       width = 10.5, height = 7.5, units = "in", device = "pdf")
+
 rm(curv_gpooled)
 
 rm(data_raref_p)
