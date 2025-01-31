@@ -16,11 +16,18 @@ palette_substrate <- c(
   "soil" = "#DB9D85CC"       
 )
 
+
+palette_substrate <- c(
+  "spiderweb" = "#c9c9c9",  
+  "leaf" = "#c2d3a6",      
+  "soil" = "#e2b19d"       
+)
+
 palette_primers <- c("12SV5" = "#FFB3B3AA", "16Smam" = "#A2D1D1AA")
 
 # Ordering elements
 class_order <- c("Aves", "Mammalia", "Amphibia", "Lepidosauria")
-
+substrate_order <- c("soil", "leaf", "spiderweb")
 
 # Data quality exploration ----
 
@@ -780,36 +787,80 @@ names(data_inext_gpooled) <- substrates_list
 #Generate rarefaction curves using INEXT
 inext_raw_gpooled <- iNEXT::iNEXT(data_inext_gpooled, q = 0, datatype = "incidence_raw")
 
-#Plot rarefaction curves 
-curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1) +
-  scale_color_manual(values = palette_substrate) +
-  scale_fill_manual(values = palette_substrate) +
-  ggtitle("Rarefaction Curve - Pooled 12Sv5 - 16Smam") +
-  theme_minimal() +
-  ylim(c(0, 60))
+#Extract plot rarefaction curves data 
+curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1, se = TRUE)
+plot_data <- curv_gpooled$data
 
-curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1) +
-  scale_color_manual(values = palette_substrate) +
-  scale_fill_manual(values = palette_substrate) +
-  ggtitle("Rarefaction Curve - Pooled 12Sv5 - 16Smam") +
-  ylim(c(0, 60)) +
+#Plot rarefaction curves
+plot_data$col <- factor(plot_data$col, levels = substrate_order)
+
+curv_gpooled <- ggplot(data = plot_data, aes(x = x, y = y, colour = col)) +
+  geom_ribbon(
+    aes(ymin = y.lwr, ymax = y.upr, fill = col),
+    alpha = 0.2,
+    colour = NA 
+  ) +
+  geom_line(aes(linetype = lty), size = 2.5) +
+  geom_point(
+    data = plot_data %>%
+      filter(Method == "Extrapolation") %>%
+      group_by(col) %>%
+      slice_min(order_by = x, n = 1),
+    aes(shape = col),
+    size = 6
+  ) +
+  scale_colour_manual(
+    values = palette_substrate
+  ) +
+  scale_fill_manual(
+    values = palette_substrate
+  ) +
+  labs(
+    title = NULL,
+    x = "Number of samples",
+    y = "Species richness"
+  ) +
+  ylim(c(0, 60)) +  
   theme_minimal(base_size = 14) +
   theme(
-    axis.text = element_text(color = "gray20", size = 12),          
-    axis.title = element_text(color = "gray20", size = 14), 
     legend.position = "bottom",
-    legend.box = "horizontal",
-    legend.text = element_text(size = 12)
+    legend.title = element_blank(),  
+    axis.text = element_text(color = "gray20", size = 11),
+    axis.title = element_text(color = "gray20", size = 12),
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold")
+  ) +
+  guides(
+    lty = "none",  
+    fill = "none", 
+    colour = guide_legend(override.aes = list(
+      linetype = "blank",  
+      size = 5  
+    ))
   )
-
-
 curv_gpooled
 
-ggsave(filename = here::here("figures","rarefaction_curve.pdf"), plot = curv_gpooled, 
-       width = 10.5, height = 7.5, units = "in", device = "pdf")
+#Save rarefaction curves
+ggsave(filename = here::here("figures","rarefaction_curve.pdf"),
+       plot = curv_gpooled, 
+       width = 2000, height = 2000, units = "px", device = "pdf", dpi = 300, bg = NULL)
 
+
+#Remove no more required elements
 rm(curv_gpooled)
 
 rm(data_raref_p)
 rm(data_raref_g)
 
+
+# #Simple way to do similar rarefaction curve 
+# curv_gpooled <- iNEXT::ggiNEXT(inext_raw_gpooled, type = 1) +
+#   scale_color_manual(values = palette_substrate) +
+#   scale_fill_manual(values = palette_substrate) +
+#   ggtitle("Rarefaction Curve - Pooled 12Sv5 - 16Smam") +
+#   ylim(c(0, 60)) +
+#   theme_minimal(base_size = 14) +
+#   theme(
+#     axis.text = element_text(color = "gray20", size = 12),          
+#     axis.title = element_text(color = "gray20", size = 14), 
+#     legend.position = "bottom"
+#   ) 
