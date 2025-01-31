@@ -9,14 +9,6 @@ library(patchwork)
 
 
 ## Graphical parameters ----
-
-palette_substrate <- c(
-  "spiderweb" = "#BBBBBBCC",  
-  "leaf" = "#99B56B99",      
-  "soil" = "#DB9D85CC"       
-)
-
-
 palette_substrate <- c(
   "spiderweb" = "#c9c9c9",  
   "leaf" = "#c2d3a6",      
